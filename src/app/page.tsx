@@ -57,16 +57,26 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 강원도 스탬프 배너 */}
-      <section className="px-5 mb-8">
-        <div className="bg-gradient-to-r from-green-50 to-teal-50 rounded-2xl p-5 border border-green-100">
-          <p className="text-xs font-medium text-green-600 mb-1">강원도 스탬프 투어</p>
-          <h3 className="font-bold text-gray-800 text-base mb-3">18개 시군을 모두 방문해보세요!</h3>
+      {/* 배너 2개 나란히 */}
+      <section className="px-5 mb-8 flex gap-3">
+        <div className="flex-1 bg-gradient-to-br from-green-50 to-teal-50 rounded-2xl p-4 border border-green-100">
+          <p className="text-[10px] font-medium text-green-600 mb-1">스탬프 투어</p>
+          <h3 className="font-bold text-gray-800 text-sm mb-3">18개 시군 완주 도전!</h3>
           <Link
             href="/stamp"
-            className="inline-block bg-green-500 text-white text-sm px-4 py-2 rounded-lg font-medium"
+            className="inline-block bg-green-500 text-white text-xs px-3 py-1.5 rounded-lg font-medium"
           >
-            스탬프 확인하기
+            스탬프 보기
+          </Link>
+        </div>
+        <div className="flex-1 bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-4 border border-purple-100">
+          <p className="text-[10px] font-medium text-purple-600 mb-1">여행 미션</p>
+          <h3 className="font-bold text-gray-800 text-sm mb-3">가족 미션 20개 도전!</h3>
+          <Link
+            href="/mission"
+            className="inline-block bg-purple-500 text-white text-xs px-3 py-1.5 rounded-lg font-medium"
+          >
+            미션 보기
           </Link>
         </div>
       </section>

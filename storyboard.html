@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>엄마랑 아빠랑 — 서비스 이용 시나리오</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    background: #f0f4f8;
+    color: #1a1a1a;
+    padding: 40px 20px;
+  }
+
+  .page-title {
+    text-align: center;
+    margin-bottom: 8px;
+  }
+
+  .page-title h1 {
+    font-size: 26px;
+    font-weight: 800;
+    color: #0c4a6e;
+  }
+
+  .page-title p {
+    font-size: 14px;
+    color: #64748b;
+    margin-top: 6px;
+  }
+
+  .family-badge {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin: 24px 0 40px;
+    flex-wrap: wrap;
+  }
+
+  .person {
+    background: white;
+    border-radius: 16px;
+    padding: 14px 20px;
+    text-align: center;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    min-width: 130px;
+  }
+
+  .person .avatar {
+    font-size: 36px;
+    margin-bottom: 6px;
+  }
+
+  .person .name {
+    font-weight: 700;
+    font-size: 15px;
+    color: #0c4a6e;
+  }
+
+  .person .role {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 2px;
+  }
+
+  .journey {
+    display: flex;
+    flex-direction: column;
+    gap: 60px;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .scene {
+    display: flex;
+    align-items: flex-start;
+    gap: 36px;
+  }
+
+  .scene.reverse {
+    flex-direction: row-reverse;
+  }
+
+  .scene-text {
+    flex: 1;
+    padding-top: 40px;
+  }
+
+  .scene-number {
+    display: inline-block;
+    background: #0ea5e9;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+    letter-spacing: 0.5px;
+  }
+
+  .scene-title {
+    font-size: 20px;
+    font-weight: 800;
+    color: #0c4a6e;
+    line-height: 1.3;
+    margin-bottom: 10px;
+  }
+
+  .scene-desc {
+    font-size: 14px;
+    color: #475569;
+    line-height: 1.75;
+    word-break: keep-all;
+  }
+
+  .scene-desc strong { color: #0c4a6e; }
+
+  .api-tag {
+    display: inline-block;
+    background: #e0f2fe;
+    color: #0369a1;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 6px;
+    margin: 4px 3px 0 0;
+  }
+
+  /* ── 폰 목업 ── */
+  .phone-wrap {
+    flex: 0 0 220px;
+    position: relative;
+  }
+
+  .phone {
+    width: 220px;
+    background: #0f172a;
+    border-radius: 36px;
+    padding: 10px;
+    box-shadow:
+      0 0 0 2px #1e293b,
+      0 20px 60px rgba(0,0,0,0.35),
+      inset 0 0 0 1px rgba(255,255,255,0.05);
+    position: relative;
+  }
+
+  .phone::before {
+    content: '';
+    display: block;
+    width: 60px;
+    height: 8px;
+    background: #1e293b;
+    border-radius: 0 0 8px 8px;
+    margin: 0 auto 8px;
+  }
+
+  .phone-screen {
+    background: #f8fafc;
+    border-radius: 28px;
+    overflow: hidden;
+    min-height: 420px;
+    position: relative;
+  }
+
+  /* 상태바 */
+  .status-bar {
+    background: #0ea5e9;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    font-size: 9px;
+    color: white;
+    font-weight: 600;
+  }
+
+  /* ── Scene 1: 홈화면 ── */
+  .home-screen { background: linear-gradient(160deg, #e0f2fe 0%, #f8fafc 60%); }
+
+  .home-header {
+    padding: 16px 14px 10px;
+  }
+
+  .home-header .greeting {
+    font-size: 10px;
+    color: #0369a1;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+
+  .home-header h2 {
+    font-size: 17px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.3;
+  }
+
+  .home-header p {
+    font-size: 10px;
+    color: #64748b;
+    margin-top: 2px;
+  }
+
+  .cta-btn {
+    margin: 8px 14px;
+    background: #0ea5e9;
+    color: white;
+    text-align: center;
+    padding: 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(14,165,233,0.4);
+  }
+
+  .theme-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    padding: 0 14px;
+    margin-top: 10px;
+  }
+
+  .theme-item {
+    background: white;
+    border-radius: 10px;
+    padding: 6px 4px;
+    text-align: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+
+  .theme-item .emoji { font-size: 16px; }
+  .theme-item .label { font-size: 8px; color: #64748b; margin-top: 2px; display: block; }
+
+  .age-scroll {
+    display: flex;
+    gap: 6px;
+    padding: 10px 14px;
+    overflow: hidden;
+  }
+
+  .age-chip {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 5px 8px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .age-chip .alabel { font-size: 10px; font-weight: 700; color: #0f172a; }
+  .age-chip .arange { font-size: 8px; color: #94a3b8; display: block; }
+
+  /* ── Scene 2: 필터 화면 ── */
+  .filter-header {
+    background: white;
+    padding: 12px 14px 10px;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .back-btn { font-size: 9px; color: #94a3b8; margin-bottom: 4px; }
+  .filter-title { font-size: 14px; font-weight: 800; color: #0f172a; }
+  .filter-sub { font-size: 9px; color: #94a3b8; }
+
+  .filter-section { padding: 10px 14px 0; }
+  .filter-label { font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+
+  .region-select {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 11px;
+    color: #0f172a;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+
+  .chip {
+    padding: 4px 8px;
+    border-radius: 20px;
+    font-size: 9px;
+    font-weight: 600;
+    border: 1px solid #e2e8f0;
+    color: #64748b;
+    background: white;
+  }
+
+  .chip.active {
+    background: #0ea5e9;
+    color: white;
+    border-color: #0ea5e9;
+  }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+  }
+
+  .toggle {
+    width: 28px;
+    height: 16px;
+    background: #0ea5e9;
+    border-radius: 8px;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .toggle::after {
+    content: '';
+    position: absolute;
+    right: 2px;
+    top: 2px;
+    width: 12px;
+    height: 12px;
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+
+  .toggle-label { font-size: 10px; color: #374151; }
+
+  .search-btn {
+    margin: 8px 14px 0;
+    background: #0ea5e9;
+    color: white;
+    text-align: center;
+    padding: 9px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  /* ── Scene 3: 결과 ── */
+  .result-header {
+    background: white;
+    padding: 10px 14px;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .result-title { font-size: 13px; font-weight: 800; color: #0f172a; }
+  .result-count { font-size: 9px; color: #0ea5e9; font-weight: 700; background: #e0f2fe; padding: 2px 7px; border-radius: 10px; }
+
+  .filter-tags { display: flex; gap: 4px; padding: 6px 14px; overflow: hidden; }
+  .ftag {
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    color: #0369a1;
+    font-size: 8px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    white-space: nowrap;
+    font-weight: 600;
+  }
+
+  .place-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 0 10px 10px; }
+
+  .place-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+
+  .place-img {
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+  }
+
+  .place-info { padding: 5px 7px 7px; }
+  .place-name { font-size: 9px; font-weight: 700; color: #0f172a; line-height: 1.3; }
+  .place-addr { font-size: 8px; color: #94a3b8; margin-top: 1px; }
+  .stroller-badge { font-size: 7px; color: #059669; font-weight: 700; margin-top: 2px; }
+
+  /* ── Scene 4: 장소 상세 ── */
+  .detail-img {
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    position: relative;
+  }
+
+  .detail-img .back { position: absolute; top: 8px; left: 10px; font-size: 9px; color: white; background: rgba(0,0,0,0.35); padding: 2px 6px; border-radius: 6px; }
+
+  .detail-body { padding: 10px 14px; }
+  .detail-name { font-size: 15px; font-weight: 800; color: #0f172a; }
+  .detail-addr { font-size: 9px; color: #64748b; margin: 2px 0 6px; }
+
+  .info-row { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+  .info-chip {
+    font-size: 9px;
+    padding: 3px 7px;
+    border-radius: 8px;
+    font-weight: 600;
+  }
+
+  .ic-green { background: #dcfce7; color: #166534; }
+  .ic-blue { background: #e0f2fe; color: #0369a1; }
+  .ic-yellow { background: #fef9c3; color: #854d0e; }
+
+  .nearby-title { font-size: 10px; font-weight: 700; color: #0f172a; margin-bottom: 5px; border-top: 1px solid #f1f5f9; padding-top: 8px; }
+
+  .cafe-item { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+  .cafe-emoji { font-size: 14px; }
+  .cafe-name { font-size: 10px; font-weight: 600; color: #0f172a; }
+  .cafe-meta { font-size: 8px; color: #94a3b8; }
+  .cafe-dist { font-size: 8px; color: #0ea5e9; font-weight: 700; margin-left: auto; }
+
+  .add-plan-btn {
+    margin-top: 8px;
+    background: #0f172a;
+    color: white;
+    text-align: center;
+    padding: 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  /* ── Scene 5: 스탬프 ── */
+  .stamp-header { background: white; padding: 10px 14px; border-bottom: 1px solid #f1f5f9; }
+  .stamp-title { font-size: 13px; font-weight: 800; color: #0f172a; }
+  .stamp-sub { font-size: 9px; color: #64748b; }
+
+  .stamp-progress { padding: 8px 14px; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 9px; color: #64748b; margin-bottom: 4px; }
+  .progress-bar { height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #0ea5e9, #06b6d4); border-radius: 3px; }
+
+  .stamp-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; padding: 0 10px 10px; }
+
+  .stamp-item {
+    aspect-ratio: 1;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    border: 1.5px solid #e2e8f0;
+    background: white;
+    position: relative;
+  }
+
+  .stamp-item.earned {
+    background: linear-gradient(135deg, #0ea5e9, #06b6d4);
+    border-color: #0ea5e9;
+    box-shadow: 0 2px 8px rgba(14,165,233,0.3);
+  }
+
+  .stamp-item .sname { font-size: 7px; color: #94a3b8; margin-top: 2px; }
+  .stamp-item.earned .sname { color: rgba(255,255,255,0.85); }
+
+  .stamp-popup {
+    position: absolute;
+    inset: 0;
+    background: rgba(15,23,42,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 28px;
+    z-index: 10;
+  }
+
+  .stamp-popup-box {
+    background: white;
+    border-radius: 18px;
+    padding: 16px 14px;
+    text-align: center;
+    width: 80%;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+  }
+
+  .popup-emoji { font-size: 36px; margin-bottom: 6px; }
+  .popup-title { font-size: 13px; font-weight: 800; color: #0f172a; margin-bottom: 3px; }
+  .popup-sub { font-size: 9px; color: #64748b; }
+  .popup-btn { background: #0ea5e9; color: white; border-radius: 8px; padding: 6px; font-size: 10px; font-weight: 700; margin-top: 10px; }
+
+  /* ── Scene 6: 일지 ── */
+  .journal-header { background: white; padding: 10px 14px; border-bottom: 1px solid #f1f5f9; }
+  .journal-title { font-size: 13px; font-weight: 800; color: #0f172a; }
+  .journal-sub { font-size: 9px; color: #64748b; }
+
+  .timeline { padding: 8px 14px; }
+
+  .tl-item { display: flex; gap: 8px; margin-bottom: 10px; }
+  .tl-dot-col { display: flex; flex-direction: column; align-items: center; }
+  .tl-dot { width: 10px; height: 10px; border-radius: 50%; background: #0ea5e9; flex-shrink: 0; margin-top: 3px; }
+  .tl-line { width: 2px; flex: 1; background: #e2e8f0; margin-top: 2px; }
+
+  .tl-content { flex: 1; padding-bottom: 4px; }
+  .tl-time { font-size: 8px; color: #94a3b8; margin-bottom: 2px; }
+  .tl-place { font-size: 10px; font-weight: 700; color: #0f172a; }
+  .tl-memo { font-size: 9px; color: #64748b; margin-top: 1px; line-height: 1.4; }
+
+  .tl-photo {
+    width: 52px;
+    height: 40px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .ai-btn {
+    margin: 0 14px 10px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+    text-align: center;
+    padding: 9px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  /* ── Scene 7: AI 블로그 ── */
+  .blog-header {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    padding: 12px 14px 10px;
+    color: white;
+  }
+
+  .blog-tag { font-size: 9px; font-weight: 700; background: rgba(255,255,255,0.2); display: inline-block; padding: 2px 7px; border-radius: 10px; margin-bottom: 4px; }
+  .blog-title { font-size: 13px; font-weight: 800; line-height: 1.35; }
+  .blog-meta { font-size: 9px; color: rgba(255,255,255,0.7); margin-top: 4px; }
+
+  .blog-body { padding: 10px 14px; font-size: 10px; color: #374151; line-height: 1.7; }
+  .blog-body p { margin-bottom: 7px; }
+
+  .blog-img {
+    display: flex;
+    gap: 4px;
+    padding: 0 14px 10px;
+  }
+
+  .blog-img-item {
+    flex: 1;
+    height: 50px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+  }
+
+  .copy-btn {
+    margin: 0 14px 10px;
+    border: 1.5px solid #6366f1;
+    color: #6366f1;
+    text-align: center;
+    padding: 7px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  /* 연결 화살표 */
+  .arrow {
+    text-align: center;
+    font-size: 28px;
+    color: #0ea5e9;
+    margin: -20px 0;
+    line-height: 1;
+  }
+
+  /* 반응형 */
+  @media (max-width: 640px) {
+    .scene, .scene.reverse {
+      flex-direction: column;
+      align-items: center;
+    }
+    .scene-text { padding-top: 0; }
+    .phone-wrap { width: 220px; }
+  }
+
+  @media print {
+    body { background: white; padding: 20px; }
+    .scene { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-title">
+  <h1>서비스 이용 시나리오</h1>
+  <p>가상 가족 '김기태·임희정·김민서(6개월)' 의 강원도 속초 당일 여행 체험기</p>
+</div>
+
+<!-- 가족 소개 -->
+<div class="family-badge">
+  <div class="person">
+    <div class="avatar">👨</div>
+    <div class="name">김기태</div>
+    <div class="role">아빠 · 35세</div>
+  </div>
+  <div class="person">
+    <div class="avatar">👩</div>
+    <div class="name">임희정</div>
+    <div class="role">엄마 · 33세</div>
+  </div>
+  <div class="person">
+    <div class="avatar">👶</div>
+    <div class="name">김민서</div>
+    <div class="role">아들 · 6개월</div>
+  </div>
+</div>
+
+<div class="journey">
+
+  <!-- ────── SCENE 1 ────── -->
+  <div class="scene">
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="status-bar"><span>9:41</span><span>🔋</span></div>
+          <div class="home-screen">
+            <div class="home-header">
+              <div class="greeting">강원도 가족여행</div>
+              <h2>엄마랑 아빠랑 👨‍👩‍👧</h2>
+              <p>아이와 함께한 여행, 추억이 콘텐츠가 되다</p>
+            </div>
+            <div class="cta-btn">여행지 찾기 →</div>
+            <div style="padding:8px 14px 4px">
+              <div style="font-size:11px;font-weight:700;color:#0f172a;margin-bottom:6px">테마로 찾기</div>
+            </div>
+            <div class="theme-grid">
+              <div class="theme-item"><div class="emoji">🌿</div><span class="label">자연·생태</span></div>
+              <div class="theme-item"><div class="emoji">🏯</div><span class="label">역사·교육</span></div>
+              <div class="theme-item"><div class="emoji">🎯</div><span class="label">체험·액티비티</span></div>
+              <div class="theme-item"><div class="emoji">💆</div><span class="label">힐링·휴양</span></div>
+              <div class="theme-item"><div class="emoji">🍜</div><span class="label">음식·맛집</span></div>
+              <div class="theme-item"><div class="emoji">🏖️</div><span class="label">바다·해변</span></div>
+              <div class="theme-item"><div class="emoji">🎨</div><span class="label">문화·예술</span></div>
+              <div class="theme-item"><div class="emoji">➕</div><span class="label">더보기</span></div>
+            </div>
+            <div style="padding:10px 14px 4px">
+              <div style="font-size:11px;font-weight:700;color:#0f172a;margin-bottom:6px">아이 나이로 찾기</div>
+            </div>
+            <div class="age-scroll">
+              <div class="age-chip"><span class="alabel">영아</span><span class="arange">0~1세</span></div>
+              <div class="age-chip"><span class="alabel">유아</span><span class="arange">2~5세</span></div>
+              <div class="age-chip"><span class="alabel">어린이</span><span class="arange">6~9세</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="scene-text">
+      <span class="scene-number">SCENE 01</span>
+      <div class="scene-title">여행 전날 밤,<br>아빠가 앱을 켠다</div>
+      <p class="scene-desc">
+        "민서 데리고 주말에 어디 갈까?" 김기태 씨가 '엄마랑 아빠랑' 앱을 열었다.
+        테마 그리드에서 <strong>자연·생태</strong>와 <strong>힐링·휴양</strong>을 눈에 담고,
+        아이 나이 탭에서 <strong>영아(0~1세)</strong>를 탭한다.
+        <br><br>홈에서 바로 <strong>'여행지 찾기'</strong> 버튼을 눌러 필터 화면으로 이동.
+      </p>
+      <br>
+      <span class="api-tag">TourAPI_GW</span>
+    </div>
+  </div>
+
+  <!-- ────── SCENE 2 ────── -->
+  <div class="scene reverse">
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="status-bar"><span>9:42</span><span>🔋</span></div>
+          <div style="background:white;">
+            <div class="filter-header">
+              <div class="back-btn">← 뒤로</div>
+              <div class="filter-title">여행지 탐색</div>
+              <div class="filter-sub">강원도 18개 시군 · 아이 맞춤 추천</div>
+            </div>
+            <div class="filter-section">
+              <div class="filter-label">지역</div>
+              <div class="region-select">
+                <span>🌊 속초시</span>
+                <span style="color:#94a3b8;font-size:10px">▾</span>
+              </div>
+            </div>
+            <div class="filter-section" style="margin-top:8px">
+              <div class="filter-label">아이 나이</div>
+              <div class="chips">
+                <span class="chip active">영아 0~1세</span>
+                <span class="chip">유아 2~5세</span>
+                <span class="chip">어린이 6~9세</span>
+              </div>
+            </div>
+            <div class="filter-section" style="margin-top:4px">
+              <div class="filter-label">테마 (복수 선택)</div>
+              <div class="chips">
+                <span class="chip active">🌿 자연·생태</span>
+                <span class="chip active">💆 힐링·휴양</span>
+                <span class="chip">🏖️ 바다·해변</span>
+                <span class="chip">🍜 음식</span>
+              </div>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle"></div>
+              <span class="toggle-label">유모차 접근 가능한 곳만</span>
+            </div>
+            <div class="search-btn">여행지 찾기</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="scene-text">
+      <span class="scene-number">SCENE 02</span>
+      <div class="scene-title">조건을 설정한다<br>영아·속초·유모차 OK</div>
+      <p class="scene-desc">
+        지역 <strong>속초시</strong> 선택, 아이 나이 <strong>영아(0~1세)</strong>,
+        테마 <strong>자연·생태 + 힐링·휴양</strong> 복수 선택.
+        <br><br>
+        마지막으로 <strong>유모차 접근 가능 토글</strong>을 켠다.
+        민서가 아직 걷지 못하기 때문에 유모차 접근성은 필수 조건.
+        <br><br>
+        '여행지 찾기' 버튼을 누른다.
+      </p>
+      <br>
+      <span class="api-tag">TourAPI_GW</span>
+      <span class="api-tag">무장애 여행정보 API</span>
+    </div>
+  </div>
+
+  <!-- ────── SCENE 3 ────── -->
+  <div class="scene">
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="status-bar"><span>9:42</span><span>🔋</span></div>
+          <div style="background:#f8fafc;">
+            <div class="result-header">
+              <div class="result-title">속초 추천 여행지</div>
+              <div class="result-count">17곳 발견</div>
+            </div>
+            <div class="filter-tags">
+              <span class="ftag">영아</span>
+              <span class="ftag">유모차 ✓</span>
+              <span class="ftag">자연·생태</span>
+              <span class="ftag">힐링·휴양</span>
+            </div>
+            <div class="place-grid">
+              <div class="place-card">
+                <div class="place-img" style="background:#e0f2fe">🚡</div>
+                <div class="place-info">
+                  <div class="place-name">설악산 권금성 케이블카</div>
+                  <div class="place-addr">속초시 설악동</div>
+                  <div class="stroller-badge">🦽 유모차 가능</div>
+                </div>
+              </div>
+              <div class="place-card">
+                <div class="place-img" style="background:#fef3c7">🏖️</div>
+                <div class="place-info">
+                  <div class="place-name">속초 해수욕장</div>
+                  <div class="place-addr">속초시 조양동</div>
+                  <div class="stroller-badge">🦽 유모차 가능</div>
+                </div>
+              </div>
+              <div class="place-card">
+                <div class="place-img" style="background:#dcfce7">⛵</div>
+                <div class="place-info">
+                  <div class="place-name">속초 아바이마을</div>
+                  <div class="place-addr">속초시 청호동</div>
+                  <div class="stroller-badge">🦽 유모차 가능</div>
+                </div>
+              </div>
+              <div class="place-card">
+                <div class="place-img" style="background:#fce7f3">🏞️</div>
+                <div class="place-info">
+                  <div class="place-name">영금정·동명항</div>
+                  <div class="place-addr">속초시 동명동</div>
+                  <div class="stroller-badge">🦽 유모차 가능</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="scene-text">
+      <span class="scene-number">SCENE 03</span>
+      <div class="scene-title">유모차 가능한 속초 명소<br>17곳이 뜬다</div>
+      <p class="scene-desc">
+        불과 2초 만에 결과가 나왔다. 무장애 여행정보 API와 교차 검증된
+        <strong>유모차 접근 가능 장소만</strong> 필터링된 17곳.
+        <br><br>
+        <strong>설악산 권금성 케이블카</strong>가 첫 번째로 뜬다.
+        "어, 케이블카는 민서도 탈 수 있겠는데?" 임희정 씨가 반색한다.
+        카드를 탭해 상세 정보를 확인한다.
+      </p>
+      <br>
+      <span class="api-tag">TourAPI_GW</span>
+      <span class="api-tag">무장애 여행정보 API</span>
+    </div>
+  </div>
+
+  <!-- ────── SCENE 4 ────── -->
+  <div class="scene reverse">
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="status-bar" style="background:#0f172a"><span>10:15</span><span>🔋</span></div>
+          <div style="background:#f8fafc;">
+            <div class="detail-img" style="background:linear-gradient(135deg,#0ea5e9,#0369a1)">
+              <span class="back">← 뒤로</span>
+              🚡
+            </div>
+            <div class="detail-body">
+              <div class="detail-name">설악산 권금성 케이블카</div>
+              <div class="detail-addr">📍 강원 속초시 설악동 산 41-1</div>
+              <div class="info-row">
+                <span class="info-chip ic-green">🦽 유모차 가능</span>
+                <span class="info-chip ic-blue">🏔️ 관광지</span>
+                <span class="info-chip ic-yellow">⏱ 약 90분</span>
+              </div>
+              <div class="nearby-title">📍 주변 카페·맛집 (2km 이내)</div>
+              <div class="cafe-item">
+                <div class="cafe-emoji">☕</div>
+                <div>
+                  <div class="cafe-name">설악 뷰 카페</div>
+                  <div class="cafe-meta">⭐ 4.5 · 영업중</div>
+                </div>
+                <div class="cafe-dist">0.4km</div>
+              </div>
+              <div class="cafe-item">
+                <div class="cafe-emoji">🍜</div>
+                <div>
+                  <div class="cafe-name">속초 아바이순대국</div>
+                  <div class="cafe-meta">⭐ 4.3 · 영업중</div>
+                </div>
+                <div class="cafe-dist">0.9km</div>
+              </div>
+              <div class="add-plan-btn">+ 일정에 추가하기</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="scene-text">
+      <span class="scene-number">SCENE 04</span>
+      <div class="scene-title">현지 도착 — 주변 카페와<br>맛집이 실시간으로 뜬다</div>
+      <p class="scene-desc">
+        당일 아침, 가족이 속초에 도착했다.
+        앱이 현재 위치를 기반으로 <strong>반경 2km 내 카페·맛집</strong>을 자동 불러온다.
+        <br><br>
+        점심은 <strong>속초 아바이순대국</strong>으로 낙점.
+        "+ 일정에 추가하기" 한 번으로 오늘의 일정표가 업데이트된다.
+      </p>
+      <br>
+      <span class="api-tag">카카오 로컬 API</span>
+      <span class="api-tag">무장애 여행정보 API</span>
+    </div>
+  </div>
+
+  <!-- ────── SCENE 5 ────── -->
+  <div class="scene">
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="status-bar"><span>17:30</span><span>🔋</span></div>
+          <div style="background:#f8fafc; position:relative;">
+            <div class="stamp-header">
+              <div class="stamp-title">🗺️ 강원도 스탬프 투어</div>
+              <div class="stamp-sub">18개 시군 완주에 도전하세요!</div>
+            </div>
+            <div class="stamp-progress">
+              <div class="progress-label"><span>1 / 18 달성</span><span style="color:#0ea5e9;font-weight:700">5.5%</span></div>
+              <div class="progress-bar"><div class="progress-fill" style="width:5.5%"></div></div>
+            </div>
+            <div class="stamp-grid">
+              <div class="stamp-item earned">🌊<span class="sname">속초</span></div>
+              <div class="stamp-item">🌸<span class="sname">강릉</span></div>
+              <div class="stamp-item">🏔<span class="sname">인제</span></div>
+              <div class="stamp-item">🎣<span class="sname">고성</span></div>
+              <div class="stamp-item">🌿<span class="sname">양양</span></div>
+              <div class="stamp-item">⛷<span class="sname">평창</span></div>
+              <div class="stamp-item">🦌<span class="sname">화천</span></div>
+              <div class="stamp-item">🐟<span class="sname">동해</span></div>
+            </div>
+            <!-- 팝업 -->
+            <div class="stamp-popup">
+              <div class="stamp-popup-box">
+                <div class="popup-emoji">🎉</div>
+                <div class="popup-title">속초 스탬프 획득!</div>
+                <div class="popup-sub">설악산 권금성 케이블카를<br>방문했어요. 첫 스탬프!</div>
+                <div class="popup-btn">확인하기</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="scene-text">
+      <span class="scene-number">SCENE 05</span>
+      <div class="scene-title">귀갓길 — 속초 스탬프<br>첫 획득! 🎉</div>
+      <p class="scene-desc">
+        오후 5시 30분, 집으로 돌아가는 차 안.
+        앱에서 <strong>속초시 스탬프</strong>가 팝업으로 뜬다.
+        <br><br>
+        "민서야, 속초 찍었다! 이제 17개 더 가자!"
+        김기태 씨가 아기 손을 잡고 웃는다.
+        지도에 속초가 하늘색으로 색칠된다.
+        <br><br>
+        인구감소지역 방문 시엔 <strong>희귀 디자인 스탬프</strong>가 별도 부여된다.
+      </p>
+      <br>
+      <span class="api-tag">TourAPI_GW (집중률)</span>
+    </div>
+  </div>
+
+  <!-- ────── SCENE 6 ────── -->
+  <div class="scene reverse">
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="status-bar"><span>21:10</span><span>🔋</span></div>
+          <div style="background:#f8fafc;">
+            <div class="journal-header">
+              <div class="journal-title">📔 오늘의 여행 일지</div>
+              <div class="journal-sub">2026년 5월 3일 · 속초시</div>
+            </div>
+            <div class="timeline">
+              <div class="tl-item">
+                <div class="tl-dot-col"><div class="tl-dot"></div><div class="tl-line"></div></div>
+                <div class="tl-content">
+                  <div class="tl-time">10:20</div>
+                  <div class="tl-place">설악산 권금성 케이블카</div>
+                  <div class="tl-memo">민서 첫 케이블카! 구름 위에 올라간 것 같았다</div>
+                </div>
+                <div class="tl-photo" style="background:#e0f2fe">🚡</div>
+              </div>
+              <div class="tl-item">
+                <div class="tl-dot-col"><div class="tl-dot"></div><div class="tl-line"></div></div>
+                <div class="tl-content">
+                  <div class="tl-time">12:40</div>
+                  <div class="tl-place">속초 아바이순대국</div>
+                  <div class="tl-memo">엄마 순대국 한 그릇 뚝딱, 민서는 낮잠 중</div>
+                </div>
+                <div class="tl-photo" style="background:#fef9c3">🍜</div>
+              </div>
+              <div class="tl-item">
+                <div class="tl-dot-col"><div class="tl-dot"></div></div>
+                <div class="tl-content">
+                  <div class="tl-time">14:30</div>
+                  <div class="tl-place">속초 해수욕장</div>
+                  <div class="tl-memo">유모차로 파도 소리 들으며 산책. 민서 눈이 동그래짐</div>
+                </div>
+                <div class="tl-photo" style="background:#dcfce7">🏖️</div>
+              </div>
+            </div>
+            <div class="ai-btn">✨ AI 블로그 초안 자동 생성</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="scene-text">
+      <span class="scene-number">SCENE 06</span>
+      <div class="scene-title">집에 돌아와 자동으로<br>완성된 여행 일지</div>
+      <p class="scene-desc">
+        저녁 9시. 앱이 오늘 방문한 장소·시간·사진을
+        <strong>자동 타임라인</strong>으로 정리해 보여준다.
+        <br><br>
+        임희정 씨가 잠든 민서를 보며 메모 한 줄씩 추가한다.
+        타임라인이 완성되면 하단의 <strong>"AI 블로그 초안 자동 생성"</strong>을 탭.
+      </p>
+    </div>
+  </div>
+
+  <!-- ────── SCENE 7 ────── -->
+  <div class="scene">
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="status-bar" style="background:#6366f1"><span>21:12</span><span>🔋</span></div>
+          <div style="background:#f8fafc;">
+            <div class="blog-header">
+              <div class="blog-tag">✨ AI 작성 초안</div>
+              <div class="blog-title">6개월 아기와 함께한<br>설악산·속초 당일 여행</div>
+              <div class="blog-meta">by 엄마랑 아빠랑 AI · 2026.05.03</div>
+            </div>
+            <div class="blog-img">
+              <div class="blog-img-item" style="background:#e0f2fe">🚡</div>
+              <div class="blog-img-item" style="background:#fef9c3">🍜</div>
+              <div class="blog-img-item" style="background:#dcfce7">🏖️</div>
+            </div>
+            <div class="blog-body">
+              <p>생후 6개월, 아직 걷지도 못하는 민서를 데리고 과연 여행이 될까 반신반의했지만 '엄마랑 아빠랑' 앱이 유모차 접근 가능한 곳만 골라줘서 걱정이 싹 사라졌어요.</p>
+              <p><strong>설악산 권금성 케이블카</strong>는 유아차 그대로 탑승 가능해서 민서도 구름 위 전망을 함께 즐겼고, 점심은 아바이순대국으로 든든하게...</p>
+            </div>
+            <div class="copy-btn">📋 복사해서 블로그에 붙여넣기</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="scene-text">
+      <span class="scene-number">SCENE 07</span>
+      <div class="scene-title">Claude AI가 블로그 초안을<br>1초 만에 완성한다</div>
+      <p class="scene-desc">
+        방문 장소·메모·사진을 학습한 <strong>Claude API</strong>가
+        감성 블로그 초안을 자동 완성했다.
+        <br><br>
+        임희정 씨는 초안을 살짝 다듬고 네이버 블로그에 붙여넣는다.
+        "민서 첫 여행 기록이 5분 만에 완성됐어!"
+        <br><br>
+        SNS 캡션도 버튼 하나로 추가 생성 가능.
+        여행의 추억이 <strong>공유 가능한 콘텐츠</strong>가 된다.
+      </p>
+      <br>
+      <span class="api-tag">Claude API (Anthropic)</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- 여정 요약 -->
+<div style="max-width:1000px;margin:60px auto 0;background:white;border-radius:20px;padding:28px 32px;box-shadow:0 4px 20px rgba(0,0,0,0.08);">
+  <h2 style="font-size:18px;font-weight:800;color:#0c4a6e;margin-bottom:16px;text-align:center">김민서 가족의 하루 여정 요약</h2>
+  <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px;text-align:center">
+    <div>
+      <div style="font-size:28px;margin-bottom:4px">🔍</div>
+      <div style="font-size:12px;font-weight:700;color:#0f172a">여행 전</div>
+      <div style="font-size:11px;color:#64748b;margin-top:2px">조건 설정 → 추천 수령<br><strong>3분</strong></div>
+    </div>
+    <div style="color:#e2e8f0;font-size:24px;padding-top:14px">→</div>
+    <div>
+      <div style="font-size:28px;margin-bottom:4px">🚡</div>
+      <div style="font-size:12px;font-weight:700;color:#0f172a">오전</div>
+      <div style="font-size:11px;color:#64748b;margin-top:2px">권금성 케이블카<br>유모차 탑승</div>
+    </div>
+    <div style="color:#e2e8f0;font-size:24px;padding-top:14px">→</div>
+    <div>
+      <div style="font-size:28px;margin-bottom:4px">🍜</div>
+      <div style="font-size:12px;font-weight:700;color:#0f172a">점심</div>
+      <div style="font-size:11px;color:#64748b;margin-top:2px">주변 맛집 실시간 안내<br>아바이순대국</div>
+    </div>
+    <div style="color:#e2e8f0;font-size:24px;padding-top:14px">→</div>
+    <div>
+      <div style="font-size:28px;margin-bottom:4px">🏖️</div>
+      <div style="font-size:12px;font-weight:700;color:#0f172a">오후</div>
+      <div style="font-size:11px;color:#64748b;margin-top:2px">속초 해수욕장<br>유모차 산책</div>
+    </div>
+    <div style="color:#e2e8f0;font-size:24px;padding-top:14px">→</div>
+    <div>
+      <div style="font-size:28px;margin-bottom:4px">🎉</div>
+      <div style="font-size:12px;font-weight:700;color:#0f172a">귀갓길</div>
+      <div style="font-size:11px;color:#64748b;margin-top:2px">속초 스탬프 획득<br>1/18 달성</div>
+    </div>
+    <div style="color:#e2e8f0;font-size:24px;padding-top:14px">→</div>
+    <div>
+      <div style="font-size:28px;margin-bottom:4px">✨</div>
+      <div style="font-size:12px;font-weight:700;color:#0f172a">귀가 후</div>
+      <div style="font-size:11px;color:#64748b;margin-top:2px">AI 블로그 초안<br><strong>1분 완성</strong></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

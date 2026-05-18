@@ -10,6 +10,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     contentId: place.contentid,
+    contentTypeId: place.contenttypeid,
     title: place.title,
     address: place.addr1,
     image: place.firstimage ?? null,
