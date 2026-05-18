@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
+import { db } from '@/lib/supabase';
 
 const DEVICE_KEY = 'momdadtrip_device_id';
 
@@ -74,20 +74,15 @@ function formatDate(dateStr: string) {
 }
 
 async function loadTripFromDB(deviceId: string): Promise<Trip | null> {
-  const { data } = await supabase
-    .from('trips')
-    .select('*')
-    .eq('device_id', deviceId)
-    .order('updated_at', { ascending: false })
-    .limit(1)
-    .single();
-  if (!data) return null;
+  const { data, error } = await db.select('trips', { device_id: deviceId }, { order: 'updated_at.desc', limit: 1 });
+  if (error || !data || data.length === 0) return null;
+  const row = data[0];
   return {
-    id: data.id,
-    title: data.title,
-    startDate: data.start_date,
-    endDate: data.end_date,
-    days: (data.days as TripDay[]).map(d => ({
+    id: row.id,
+    title: row.title,
+    startDate: row.start_date,
+    endDate: row.end_date,
+    days: (row.days as TripDay[]).map((d: TripDay) => ({
       ...d,
       places: d.places.map(p => ({
         ...p,
@@ -98,7 +93,7 @@ async function loadTripFromDB(deviceId: string): Promise<Trip | null> {
 }
 
 async function saveTripToDB(deviceId: string, trip: Trip): Promise<string | null> {
-  const { error } = await supabase.from('trips').upsert({
+  const { error } = await db.upsert('trips', {
     id: trip.id,
     device_id: deviceId,
     title: trip.title,
@@ -107,11 +102,11 @@ async function saveTripToDB(deviceId: string, trip: Trip): Promise<string | null
     days: trip.days,
     updated_at: new Date().toISOString(),
   });
-  return error ? error.message : null;
+  return error ?? null;
 }
 
 async function deleteTripFromDB(tripId: string): Promise<void> {
-  await supabase.from('trips').delete().eq('id', tripId);
+  await db.delete('trips', { id: tripId });
 }
 
 export default function PlanClient() {
