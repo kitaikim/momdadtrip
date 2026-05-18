@@ -1,101 +1,91 @@
-import Image from "next/image";
+import Link from 'next/link';
+import { TRAVEL_THEMES, AGE_GROUPS } from '@/types';
 
 export default function Home() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <main className="min-h-screen bg-gradient-to-b from-sky-50 to-white pb-20">
+      {/* 헤더 */}
+      <header className="px-5 pt-12 pb-6">
+        <p className="text-sm font-medium text-sky-500 mb-1">강원도 가족여행</p>
+        <h1 className="text-3xl font-bold text-gray-900 leading-tight">
+          엄마랑 아빠랑 👨‍👩‍👧
+        </h1>
+        <p className="mt-2 text-gray-500 text-sm">아이와 함께한 여행, 추억이 콘텐츠가 되다</p>
+      </header>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      {/* 빠른 시작 */}
+      <section className="px-5 mb-8">
+        <Link
+          href="/explore"
+          className="block w-full bg-sky-500 text-white text-center py-4 rounded-2xl font-semibold text-lg shadow-lg shadow-sky-200 active:scale-95 transition-transform"
+        >
+          여행지 찾기 →
+        </Link>
+      </section>
+
+      {/* 테마 카드 */}
+      <section className="px-5 mb-8">
+        <h2 className="text-lg font-bold text-gray-800 mb-3">테마로 찾기</h2>
+        <div className="grid grid-cols-4 gap-3">
+          {Object.entries(TRAVEL_THEMES).map(([key, { label, emoji }]) => (
+            <Link
+              key={key}
+              href={`/explore?theme=${key}`}
+              className="flex flex-col items-center gap-1 bg-white rounded-xl p-3 shadow-sm border border-gray-100 active:bg-sky-50"
+            >
+              <span className="text-2xl">{emoji}</span>
+              <span className="text-xs text-gray-600 text-center">{label}</span>
+            </Link>
+          ))}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      </section>
+
+      {/* 연령별 추천 */}
+      <section className="px-5 mb-8">
+        <h2 className="text-lg font-bold text-gray-800 mb-3">아이 나이로 찾기</h2>
+        <div className="flex gap-3 overflow-x-auto pb-1">
+          {Object.entries(AGE_GROUPS).map(([key, { label, range }]) => (
+            <Link
+              key={key}
+              href={`/explore?age=${key}`}
+              className="flex-shrink-0 bg-white border border-gray-200 rounded-xl px-4 py-3 text-center shadow-sm active:bg-sky-50"
+            >
+              <p className="font-semibold text-gray-800 text-sm">{label}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{range}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* 강원도 스탬프 배너 */}
+      <section className="px-5 mb-8">
+        <div className="bg-gradient-to-r from-green-50 to-teal-50 rounded-2xl p-5 border border-green-100">
+          <p className="text-xs font-medium text-green-600 mb-1">강원도 스탬프 투어</p>
+          <h3 className="font-bold text-gray-800 text-base mb-3">18개 시군을 모두 방문해보세요!</h3>
+          <Link
+            href="/stamp"
+            className="inline-block bg-green-500 text-white text-sm px-4 py-2 rounded-lg font-medium"
+          >
+            스탬프 확인하기
+          </Link>
+        </div>
+      </section>
+
+      {/* 하단 네비게이션 */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-5 py-3 flex justify-around">
+        {[
+          { href: '/', label: '홈', emoji: '🏠' },
+          { href: '/explore', label: '탐색', emoji: '🔍' },
+          { href: '/plan', label: '일정', emoji: '📅' },
+          { href: '/journal', label: '일지', emoji: '📔' },
+          { href: '/stamp', label: '스탬프', emoji: '🗺️' },
+        ].map(({ href, label, emoji }) => (
+          <Link key={href} href={href} className="flex flex-col items-center gap-0.5">
+            <span className="text-xl">{emoji}</span>
+            <span className="text-xs text-gray-500">{label}</span>
+          </Link>
+        ))}
+      </nav>
+    </main>
   );
 }
