@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
+import { db } from '@/lib/supabase';
 import { GANGWON_SIGUNGU } from '@/types';
 
 const DEVICE_KEY = 'momdadtrip_device_id';
@@ -30,20 +30,13 @@ const SIGUNGU_EMOJI: Record<string, string> = {
 };
 
 async function loadStamps(deviceId: string): Promise<VisitedMap> {
-  const { data } = await supabase
-    .from('stamps')
-    .select('visited')
-    .eq('device_id', deviceId)
-    .single();
-  return (data?.visited as VisitedMap) ?? {};
+  const { data } = await db.select('stamps', { device_id: deviceId });
+  if (!data || data.length === 0) return {};
+  return (data[0].visited as VisitedMap) ?? {};
 }
 
 async function saveStamps(deviceId: string, visited: VisitedMap): Promise<void> {
-  await supabase.from('stamps').upsert({
-    device_id: deviceId,
-    visited,
-    updated_at: new Date().toISOString(),
-  });
+  await db.upsert('stamps', { device_id: deviceId, visited, updated_at: new Date().toISOString() });
 }
 
 export default function StampClient() {

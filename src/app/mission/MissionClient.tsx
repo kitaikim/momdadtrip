@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
+import { db } from '@/lib/supabase';
 
 const DEVICE_KEY = 'momdadtrip_device_id';
 
@@ -64,20 +64,13 @@ const MISSIONS: Mission[] = [
 const CATEGORIES: Category[] = ['nature', 'food', 'activity', 'memory'];
 
 async function loadCompleted(deviceId: string): Promise<CompletedMap> {
-  const { data } = await supabase
-    .from('missions')
-    .select('completed')
-    .eq('device_id', deviceId)
-    .single();
-  return (data?.completed as CompletedMap) ?? {};
+  const { data } = await db.select('missions', { device_id: deviceId });
+  if (!data || data.length === 0) return {};
+  return (data[0].completed as CompletedMap) ?? {};
 }
 
 async function saveCompleted(deviceId: string, completed: CompletedMap): Promise<void> {
-  await supabase.from('missions').upsert({
-    device_id: deviceId,
-    completed,
-    updated_at: new Date().toISOString(),
-  });
+  await db.upsert('missions', { device_id: deviceId, completed, updated_at: new Date().toISOString() });
 }
 
 export default function MissionClient() {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
+import { db } from '@/lib/supabase';
 
 const DEVICE_KEY = 'momdadtrip_device_id';
 
@@ -48,40 +48,31 @@ function formatDate(dateStr: string) {
 }
 
 async function loadTrip(deviceId: string): Promise<Trip | null> {
-  const { data } = await supabase
-    .from('trips')
-    .select('*')
-    .eq('device_id', deviceId)
-    .order('updated_at', { ascending: false })
-    .limit(1)
-    .single();
-  if (!data) return null;
+  const { data } = await db.select('trips', { device_id: deviceId }, { order: 'updated_at.desc', limit: 1 });
+  if (!data || data.length === 0) return null;
+  const row = data[0];
   return {
-    id: data.id,
-    title: data.title,
-    startDate: data.start_date,
-    endDate: data.end_date,
-    days: data.days,
+    id: row.id as string,
+    title: row.title as string,
+    startDate: row.start_date as string,
+    endDate: row.end_date as string,
+    days: row.days as TripDay[],
   };
 }
 
 async function loadEntries(deviceId: string, tripId: string): Promise<JournalEntry[]> {
-  const { data } = await supabase
-    .from('journal_entries')
-    .select('*')
-    .eq('device_id', deviceId)
-    .eq('trip_id', tripId);
+  const { data } = await db.select('journal_entries', { device_id: deviceId, trip_id: tripId });
   return (data ?? []).map(r => ({
-    id: r.id,
-    date: r.date,
-    memo: r.memo ?? '',
-    photo_url: r.photo_url,
+    id: r.id as string,
+    date: r.date as string,
+    memo: (r.memo as string) ?? '',
+    photo_url: r.photo_url as string | undefined,
   }));
 }
 
 async function saveEntry(deviceId: string, tripId: string, date: string, memo: string, existingId?: string): Promise<string> {
   const id = existingId ?? `${tripId}_${date}`;
-  await supabase.from('journal_entries').upsert({
+  await db.upsert('journal_entries', {
     id,
     device_id: deviceId,
     trip_id: tripId,
