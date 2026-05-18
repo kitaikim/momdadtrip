@@ -41,13 +41,16 @@ export async function POST(req: NextRequest) {
       )
     );
 
+    const errors = results
+      .filter(r => r.status === 'rejected')
+      .map(r => (r as PromiseRejectedResult).reason?.message ?? 'unknown');
+
     const places = results
       .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
-      .flatMap(r => r.value.items)
-      .filter((item: any) => item.firstimage) // 이미지 있는 것만
+      .flatMap(r => r.value.items ?? [])
       .slice(0, 20);
 
-    return NextResponse.json({ places, total: places.length });
+    return NextResponse.json({ places, total: places.length, errors });
   } catch (err) {
     console.error(err);
     return NextResponse.json({ error: '추천 데이터를 불러오지 못했어요.' }, { status: 500 });
