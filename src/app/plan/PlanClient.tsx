@@ -78,10 +78,10 @@ async function loadTripFromDB(deviceId: string): Promise<Trip | null> {
   if (error || !data || data.length === 0) return null;
   const row = data[0];
   return {
-    id: row.id,
-    title: row.title,
-    startDate: row.start_date,
-    endDate: row.end_date,
+    id: row.id as string,
+    title: row.title as string,
+    startDate: row.start_date as string,
+    endDate: row.end_date as string,
     days: (row.days as TripDay[]).map((d: TripDay) => ({
       ...d,
       places: d.places.map(p => ({
