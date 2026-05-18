@@ -104,16 +104,18 @@ export default function JournalClient() {
   useEffect(() => {
     const id = getDeviceId();
     setDeviceId(id);
-    loadTrip(id).then(async (t) => {
-      setTrip(t);
-      if (t) {
-        const list = await loadEntries(id, t.id);
-        const map: Record<string, JournalEntry> = {};
-        list.forEach(e => { map[e.date] = e; });
-        setEntries(map);
-      }
-      setLoaded(true);
-    });
+    loadTrip(id)
+      .then(async (t) => {
+        setTrip(t);
+        if (t) {
+          const list = await loadEntries(id, t.id);
+          const map: Record<string, JournalEntry> = {};
+          list.forEach(e => { map[e.date] = e; });
+          setEntries(map);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoaded(true));
   }, []);
 
   const startEdit = useCallback((date: string) => {

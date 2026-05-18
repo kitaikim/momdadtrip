@@ -83,10 +83,10 @@ export default function MissionClient() {
   useEffect(() => {
     const id = getDeviceId();
     setDeviceId(id);
-    loadCompleted(id).then((c) => {
-      setCompleted(c);
-      setLoaded(true);
-    });
+    loadCompleted(id)
+      .then((c) => setCompleted(c))
+      .catch(() => {})
+      .finally(() => setLoaded(true));
   }, []);
 
   const toggleMission = useCallback(async (mission: Mission) => {

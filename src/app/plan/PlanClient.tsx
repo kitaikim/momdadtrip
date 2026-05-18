@@ -128,10 +128,10 @@ export default function PlanClient() {
   useEffect(() => {
     const id = getDeviceId();
     setDeviceId(id);
-    loadTripFromDB(id).then((t) => {
-      setTrip(t);
-      setLoaded(true);
-    });
+    loadTripFromDB(id)
+      .then((t) => setTrip(t))
+      .catch(() => {})
+      .finally(() => setLoaded(true));
   }, []);
 
   useEffect(() => {

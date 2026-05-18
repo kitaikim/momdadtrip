@@ -48,10 +48,10 @@ export default function StampClient() {
   useEffect(() => {
     const id = getDeviceId();
     setDeviceId(id);
-    loadStamps(id).then((v) => {
-      setVisited(v);
-      setLoaded(true);
-    });
+    loadStamps(id)
+      .then((v) => setVisited(v))
+      .catch(() => {})
+      .finally(() => setLoaded(true));
   }, []);
 
   const toggleStamp = useCallback(async (code: string, name: string) => {
