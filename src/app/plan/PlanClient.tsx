@@ -160,10 +160,12 @@ export default function PlanClient() {
     setTrip(updated);
     setSaving(true);
     setSaveError(null);
-    const err = await saveTripToDB(deviceId, updated);
+    // state 타이밍 문제 방지: localStorage에서 직접 읽음
+    const currentDeviceId = getDeviceId();
+    const err = await saveTripToDB(currentDeviceId, updated);
     if (err) setSaveError(err);
     setSaving(false);
-  }, [deviceId]);
+  }, []);
 
   const createTrip = useCallback(async () => {
     if (!newTitle || !newStart || !newEnd) return;
