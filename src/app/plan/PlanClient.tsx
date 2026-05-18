@@ -97,8 +97,8 @@ async function loadTripFromDB(deviceId: string): Promise<Trip | null> {
   };
 }
 
-async function saveTripToDB(deviceId: string, trip: Trip): Promise<void> {
-  await supabase.from('trips').upsert({
+async function saveTripToDB(deviceId: string, trip: Trip): Promise<string | null> {
+  const { error } = await supabase.from('trips').upsert({
     id: trip.id,
     device_id: deviceId,
     title: trip.title,
@@ -107,6 +107,7 @@ async function saveTripToDB(deviceId: string, trip: Trip): Promise<void> {
     days: trip.days,
     updated_at: new Date().toISOString(),
   });
+  return error ? error.message : null;
 }
 
 async function deleteTripFromDB(tripId: string): Promise<void> {
@@ -120,6 +121,7 @@ export default function PlanClient() {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [showNewTrip, setShowNewTrip] = useState(false);
   const [addingPlace, setAddingPlace] = useState<TripPlace | null>(null);
   const [deviceId, setDeviceId] = useState('');
@@ -157,7 +159,9 @@ export default function PlanClient() {
   const persistTrip = useCallback(async (updated: Trip) => {
     setTrip(updated);
     setSaving(true);
-    await saveTripToDB(deviceId, updated);
+    setSaveError(null);
+    const err = await saveTripToDB(deviceId, updated);
+    if (err) setSaveError(err);
     setSaving(false);
   }, [deviceId]);
 
@@ -220,6 +224,7 @@ export default function PlanClient() {
       <div className="fixed top-0 left-0 right-0 z-10 bg-white/90 backdrop-blur-sm border-b border-gray-100 px-4 pt-12 pb-3 flex items-center justify-between">
         <h1 className="text-lg font-bold text-gray-900">여행 계획</h1>
         {saving && <span className="text-xs text-sky-400">저장 중...</span>}
+        {saveError && <span className="text-xs text-red-400 truncate max-w-48">{saveError}</span>}
       </div>
 
       <div className="pt-20 px-4">
