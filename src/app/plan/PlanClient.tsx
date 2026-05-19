@@ -208,6 +208,18 @@ export default function PlanClient() {
     setTrip(null);
   }, [trip]);
 
+  const [shareCopied, setShareCopied] = useState(false);
+  const shareTrip = useCallback(() => {
+    if (!trip) return;
+    const payload = { title: trip.title, start: trip.startDate, end: trip.endDate, days: trip.days };
+    const encoded = btoa(encodeURIComponent(JSON.stringify(payload)));
+    const url = `${window.location.origin}/trip?d=${encoded}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2500);
+    });
+  }, [trip]);
+
   if (!loaded) {
     return (
       <main className="min-h-screen bg-white flex items-center justify-center">
@@ -300,7 +312,12 @@ export default function PlanClient() {
                     );
                   })}
                 </div>
-                <button onClick={deleteTrip} className="text-xs opacity-60 underline">일정 삭제</button>
+                <div className="flex gap-3 items-center">
+                  <button onClick={shareTrip} className="text-xs opacity-80 bg-white/20 rounded-lg px-2.5 py-1 font-medium">
+                    {shareCopied ? '✓ 복사됨!' : '🔗 공유'}
+                  </button>
+                  <button onClick={deleteTrip} className="text-xs opacity-60 underline">삭제</button>
+                </div>
               </div>
             </div>
 
