@@ -1,6 +1,7 @@
 import { getDetailCommon, getBarrierFreeDetail } from '@/lib/tourapi';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import KakaoMap from './KakaoMap';
 
 export default async function PlaceDetailPage({
   params,
@@ -84,6 +85,26 @@ export default async function PlaceDetailPage({
         {bf === null && (
           <div className="mt-5 bg-gray-50 rounded-xl px-4 py-3 text-sm text-gray-400">
             육아 편의시설 정보가 아직 등록되지 않은 장소예요.
+          </div>
+        )}
+
+        {/* 지도 */}
+        {place.mapx && place.mapy && (
+          <div className="mt-6">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+              위치
+            </p>
+            <div className="rounded-2xl overflow-hidden">
+              <KakaoMap mapx={place.mapx} mapy={place.mapy} title={place.title} />
+            </div>
+            <a
+              href={`https://map.kakao.com/link/map/${encodeURIComponent(place.title)},${place.mapy},${place.mapx}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl border border-gray-200 text-sm text-gray-500"
+            >
+              <span>🗺️</span> 카카오맵에서 보기
+            </a>
           </div>
         )}
 
