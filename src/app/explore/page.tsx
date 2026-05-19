@@ -34,6 +34,9 @@ function ExploreContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
+  const [tab, setTab] = useState<'filter' | 'search'>('filter');
+  const [keyword, setKeyword] = useState('');
+
   const [selectedThemes, setSelectedThemes] = useState<TravelTheme[]>(
     searchParams.get('theme') ? [searchParams.get('theme') as TravelTheme] : []
   );
@@ -48,12 +51,27 @@ function ExploreContent() {
   const [weather, setWeather] = useState<WeatherInfo | null>(null);
 
   useEffect(() => {
-    const sigungu = selectedSigungu || '3'; // 기본값: 강릉
+    const sigungu = selectedSigungu || '3';
     fetch(`/api/weather?sigungu=${sigungu}`)
       .then(r => r.json())
       .then(setWeather)
       .catch(() => {});
   }, [selectedSigungu]);
+
+  const handleKeywordSearch = async () => {
+    if (!keyword.trim()) return;
+    setLoading(true);
+    setSearched(true);
+    try {
+      const res = await fetch(`/api/tour/search?q=${encodeURIComponent(keyword)}`);
+      const data = await res.json();
+      setPlaces(data.places ?? []);
+    } catch {
+      setPlaces([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const toggleTheme = (theme: TravelTheme) => {
     setSelectedThemes(prev =>
@@ -96,8 +114,57 @@ function ExploreContent() {
         <p className="text-sm text-gray-500 mt-1">강원도 18개 시군 · 아이 맞춤 추천</p>
       </header>
 
-      {/* 날씨 카드 */}
-      {weather && (
+      {/* 탭 */}
+      <div className="flex bg-white border-b border-gray-100">
+        <button
+          onClick={() => setTab('filter')}
+          className={`flex-1 py-3 text-sm font-semibold transition-colors ${tab === 'filter' ? 'text-sky-500 border-b-2 border-sky-500' : 'text-gray-400'}`}
+        >
+          🔍 조건 검색
+        </button>
+        <button
+          onClick={() => setTab('search')}
+          className={`flex-1 py-3 text-sm font-semibold transition-colors ${tab === 'search' ? 'text-sky-500 border-b-2 border-sky-500' : 'text-gray-400'}`}
+        >
+          ✏️ 직접 검색
+        </button>
+      </div>
+
+      {/* 키워드 검색 */}
+      {tab === 'search' && (
+        <div className="px-5 py-4 bg-white mb-2 border-b border-gray-100">
+          <div className="flex gap-2">
+            <input
+              value={keyword}
+              onChange={e => setKeyword(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleKeywordSearch()}
+              placeholder="여행지 이름으로 검색 (예: 속초, 낙산사)"
+              className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300"
+            />
+            <button
+              onClick={handleKeywordSearch}
+              disabled={loading}
+              className="bg-sky-500 text-white px-4 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-60"
+            >
+              검색
+            </button>
+          </div>
+          <div className="flex gap-2 mt-3 flex-wrap">
+            {['속초 해수욕장', '경포대', '오대산', '레일바이크', '닭갈비'].map(q => (
+              <button
+                key={q}
+                onClick={() => { setKeyword(q); }}
+                className="text-xs text-gray-500 bg-gray-100 rounded-full px-3 py-1.5"
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 날씨 카드 (조건 검색 탭에만) */}
+      {tab === 'filter' && weather && (
         <div className={`mx-5 mt-4 mb-2 rounded-2xl bg-gradient-to-r ${WEATHER_RECOMMEND[weather.type].bg} p-4 text-white`}>
           <div className="flex items-center justify-between">
             <div>
@@ -119,8 +186,8 @@ function ExploreContent() {
         </div>
       )}
 
-      {/* 필터 */}
-      <section className="px-5 py-4 bg-white mb-2 border-b border-gray-100">
+      {/* 필터 (조건 검색 탭에만) */}
+      {tab === 'filter' && <section className="px-5 py-4 bg-white mb-2 border-b border-gray-100">
         {/* 지역 선택 */}
         <div className="mb-4">
           <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">지역</label>
@@ -194,12 +261,14 @@ function ExploreContent() {
         >
           {loading ? '검색 중...' : '여행지 찾기'}
         </button>
-      </section>
+      </section>}
 
       {/* 결과 */}
       <section className="px-5 py-4">
         {!searched && (
-          <p className="text-center text-gray-400 text-sm mt-8">조건을 선택하고 여행지를 찾아보세요</p>
+          <p className="text-center text-gray-400 text-sm mt-8">
+            {tab === 'filter' ? '조건을 선택하고 여행지를 찾아보세요' : '검색어를 입력해보세요'}
+          </p>
         )}
 
         {searched && !loading && places.length === 0 && (

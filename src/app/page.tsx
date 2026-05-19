@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { TRAVEL_THEMES, AGE_GROUPS } from '@/types';
 import TripStatusBar from './TripStatusBar';
+import EventsSection from './EventsSection';
 
 export default function Home() {
   return (
@@ -64,6 +65,9 @@ export default function Home() {
             ))}
           </div>
         </section>
+
+        {/* 강원도 축제·행사 */}
+        <EventsSection />
 
         {/* 스탬프 & 미션 배너 */}
         <section className="px-5 mb-5 flex gap-3">
