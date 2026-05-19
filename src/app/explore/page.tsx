@@ -15,6 +15,21 @@ interface PlaceItem {
   mapy: string;
 }
 
+interface WeatherInfo {
+  emoji: string;
+  desc: string;
+  type: 'sunny' | 'cloudy' | 'rainy' | 'snowy';
+  temp: string;
+  city: string;
+}
+
+const WEATHER_RECOMMEND: Record<string, { label: string; themes: TravelTheme[]; bg: string }> = {
+  sunny: { label: '맑은 날 야외 코스', themes: ['nature', 'activity', 'beach'], bg: 'from-amber-400 to-orange-400' },
+  cloudy: { label: '흐린 날 나들이 코스', themes: ['history', 'culture', 'food'], bg: 'from-slate-400 to-slate-500' },
+  rainy: { label: '비 오는 날 실내 코스', themes: ['culture', 'food', 'healing'], bg: 'from-sky-500 to-indigo-500' },
+  snowy: { label: '눈 오는 날 코스', themes: ['activity', 'healing', 'food'], bg: 'from-sky-300 to-blue-400' },
+};
+
 function ExploreContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -30,6 +45,15 @@ function ExploreContent() {
   const [places, setPlaces] = useState<PlaceItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [weather, setWeather] = useState<WeatherInfo | null>(null);
+
+  useEffect(() => {
+    const sigungu = selectedSigungu || '3'; // 기본값: 강릉
+    fetch(`/api/weather?sigungu=${sigungu}`)
+      .then(r => r.json())
+      .then(setWeather)
+      .catch(() => {});
+  }, [selectedSigungu]);
 
   const toggleTheme = (theme: TravelTheme) => {
     setSelectedThemes(prev =>
@@ -71,6 +95,29 @@ function ExploreContent() {
         <h1 className="text-2xl font-bold text-gray-900">여행지 탐색</h1>
         <p className="text-sm text-gray-500 mt-1">강원도 18개 시군 · 아이 맞춤 추천</p>
       </header>
+
+      {/* 날씨 카드 */}
+      {weather && (
+        <div className={`mx-5 mt-4 mb-2 rounded-2xl bg-gradient-to-r ${WEATHER_RECOMMEND[weather.type].bg} p-4 text-white`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs opacity-80">{weather.city} 현재 날씨</p>
+              <p className="text-xl font-bold mt-0.5">
+                {weather.emoji} {weather.desc} {weather.temp}°C
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setSelectedThemes(WEATHER_RECOMMEND[weather.type].themes);
+              }}
+              className="flex-shrink-0 bg-white/20 hover:bg-white/30 rounded-xl px-3 py-2 text-xs font-semibold text-right leading-snug"
+            >
+              {WEATHER_RECOMMEND[weather.type].label}<br />
+              <span className="opacity-80">바로 검색 →</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 필터 */}
       <section className="px-5 py-4 bg-white mb-2 border-b border-gray-100">
