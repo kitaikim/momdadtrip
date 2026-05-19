@@ -1,4 +1,4 @@
-import { getDetailCommon, getBarrierFreeDetail } from '@/lib/tourapi';
+import { getDetailCommon, getBarrierFreeDetail, getLocationBasedList } from '@/lib/tourapi';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import KakaoMap from './KakaoMap';
@@ -17,6 +17,17 @@ export default async function PlaceDetailPage({
   const bf = barrierFree.status === 'fulfilled' ? barrierFree.value : null;
 
   if (!place) notFound();
+
+  // 근처 여행지 (반경 3km)
+  const nearby = place.mapx && place.mapy
+    ? await getLocationBasedList({
+        mapX: parseFloat(place.mapx),
+        mapY: parseFloat(place.mapy),
+        radius: 3000,
+        numOfRows: 7,
+      }).then(items => items.filter(i => i.contentid !== params.contentid).slice(0, 6))
+        .catch(() => [])
+    : [];
 
   const facilities = [
     { key: 'stroller', label: '유모차 대여', icon: '🛒' },
@@ -118,7 +129,34 @@ export default async function PlaceDetailPage({
           </div>
         )}
 
-        {/* 일정에 추가 버튼 (추후 /plan 연동) */}
+        {/* 이 근처 여행지 */}
+        {nearby.length > 0 && (
+          <div className="mt-8">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+              이 근처 아이와 가볼 곳
+            </p>
+            <div className="flex gap-3 overflow-x-auto pb-1 -mx-5 px-5">
+              {nearby.map(n => (
+                <Link
+                  key={n.contentid}
+                  href={`/explore/${n.contentid}`}
+                  className="flex-shrink-0 w-36 bg-gray-50 rounded-2xl overflow-hidden border border-gray-100 active:scale-95 transition-transform"
+                >
+                  {n.firstimage ? (
+                    <img src={n.firstimage} alt={n.title} className="w-full h-24 object-cover" />
+                  ) : (
+                    <div className="w-full h-24 bg-gradient-to-br from-sky-50 to-teal-50 flex items-center justify-center text-2xl">🏔️</div>
+                  )}
+                  <div className="p-2.5">
+                    <p className="text-xs font-semibold text-gray-800 leading-tight line-clamp-2">{n.title}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 일정에 추가 버튼 */}
         <div className="mt-8">
           <Link
             href={`/plan?add=${params.contentid}`}

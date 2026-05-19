@@ -34,8 +34,10 @@ function ExploreContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const [tab, setTab] = useState<'filter' | 'search'>('filter');
+  const [tab, setTab] = useState<'filter' | 'search' | 'course'>('filter');
   const [keyword, setKeyword] = useState('');
+  const [courses, setCourses] = useState<PlaceItem[]>([]);
+  const [coursesLoaded, setCoursesLoaded] = useState(false);
 
   const [selectedThemes, setSelectedThemes] = useState<TravelTheme[]>(
     searchParams.get('theme') ? [searchParams.get('theme') as TravelTheme] : []
@@ -57,6 +59,15 @@ function ExploreContent() {
       .then(setWeather)
       .catch(() => {});
   }, [selectedSigungu]);
+
+  useEffect(() => {
+    if (tab !== 'course' || coursesLoaded) return;
+    const sigungu = selectedSigungu || '';
+    fetch(`/api/tour/courses?sigungu=${sigungu}`)
+      .then(r => r.json())
+      .then(d => { setCourses(d.courses ?? []); setCoursesLoaded(true); })
+      .catch(() => setCoursesLoaded(true));
+  }, [tab, coursesLoaded, selectedSigungu]);
 
   const handleKeywordSearch = async () => {
     if (!keyword.trim()) return;
@@ -116,18 +127,19 @@ function ExploreContent() {
 
       {/* 탭 */}
       <div className="flex bg-white border-b border-gray-100">
-        <button
-          onClick={() => setTab('filter')}
-          className={`flex-1 py-3 text-sm font-semibold transition-colors ${tab === 'filter' ? 'text-sky-500 border-b-2 border-sky-500' : 'text-gray-400'}`}
-        >
-          🔍 조건 검색
-        </button>
-        <button
-          onClick={() => setTab('search')}
-          className={`flex-1 py-3 text-sm font-semibold transition-colors ${tab === 'search' ? 'text-sky-500 border-b-2 border-sky-500' : 'text-gray-400'}`}
-        >
-          ✏️ 직접 검색
-        </button>
+        {([
+          { id: 'filter', label: '🔍 조건 검색' },
+          { id: 'search', label: '✏️ 직접 검색' },
+          { id: 'course', label: '🗺️ 추천 코스' },
+        ] as const).map(t => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`flex-1 py-3 text-xs font-semibold transition-colors ${tab === t.id ? 'text-sky-500 border-b-2 border-sky-500' : 'text-gray-400'}`}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
       {/* 키워드 검색 */}
@@ -161,6 +173,36 @@ function ExploreContent() {
             ))}
           </div>
         </div>
+      )}
+
+      {/* 추천 코스 탭 */}
+      {tab === 'course' && (
+        <section className="px-5 py-4">
+          {!coursesLoaded && <p className="text-center text-gray-400 text-sm mt-8">코스 불러오는 중...</p>}
+          {coursesLoaded && courses.length === 0 && (
+            <p className="text-center text-gray-400 text-sm mt-8">코스 정보가 없어요 😅</p>
+          )}
+          <div className="flex flex-col gap-4">
+            {courses.map(c => (
+              <Link
+                key={c.contentid}
+                href={`/explore/${c.contentid}`}
+                className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 flex gap-3 p-3 active:scale-95 transition-transform"
+              >
+                {c.firstimage ? (
+                  <img src={c.firstimage} alt={c.title} className="w-24 h-20 rounded-xl object-cover flex-shrink-0" />
+                ) : (
+                  <div className="w-24 h-20 rounded-xl bg-gradient-to-br from-sky-50 to-teal-50 flex items-center justify-center text-3xl flex-shrink-0">🗺️</div>
+                )}
+                <div className="flex-1 min-w-0 py-1">
+                  <p className="font-semibold text-gray-800 text-sm leading-snug line-clamp-2">{c.title}</p>
+                  <p className="text-xs text-gray-400 mt-1 line-clamp-2">{c.addr1}</p>
+                  <span className="inline-block mt-2 text-[10px] bg-sky-50 text-sky-600 rounded-full px-2 py-0.5 font-medium">여행코스</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
       )}
 
       {/* 날씨 카드 (조건 검색 탭에만) */}
@@ -263,8 +305,8 @@ function ExploreContent() {
         </button>
       </section>}
 
-      {/* 결과 */}
-      <section className="px-5 py-4">
+      {/* 결과 (필터·검색 탭) */}
+      {tab !== 'course' && <section className="px-5 py-4">
         {!searched && (
           <p className="text-center text-gray-400 text-sm mt-8">
             {tab === 'filter' ? '조건을 선택하고 여행지를 찾아보세요' : '검색어를 입력해보세요'}
@@ -298,7 +340,7 @@ function ExploreContent() {
             </Link>
           ))}
         </div>
-      </section>
+      </section>}
 
       {/* 하단 네비게이션 */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-5 py-3 flex justify-around">
