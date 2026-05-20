@@ -52,6 +52,8 @@ export interface TravelSearchParams {
   transport: Transport;
   nights: number; // 0 = 당일치기
   strollerRequired: boolean;
+  parkingRequired?: boolean;
+  restroomRequired?: boolean;
 }
 
 // 장소 (TourAPI + 자체 큐레이션 레이어)

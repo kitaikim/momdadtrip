@@ -3,9 +3,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import BottomNav from '@/components/BottomNav';
 import { db } from '@/lib/supabase';
+import ChecklistSection from './ChecklistSection';
+import PlanMapView from './PlanMapView';
 
 const DEVICE_KEY = 'momdadtrip_device_id';
+const TRIP_CACHE_KEY = 'momdadtrip_trip_cache';
 
 function getDeviceId(): string {
   let id = localStorage.getItem(DEVICE_KEY);
@@ -14,6 +18,17 @@ function getDeviceId(): string {
     localStorage.setItem(DEVICE_KEY, id);
   }
   return id;
+}
+
+function saveTripCache(trip: Trip) {
+  try { localStorage.setItem(TRIP_CACHE_KEY, JSON.stringify(trip)); } catch {}
+}
+
+function loadTripCache(): Trip | null {
+  try {
+    const raw = localStorage.getItem(TRIP_CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
 }
 
 type PlaceCategory = 'attraction' | 'dining' | 'accommodation' | 'shopping';
@@ -42,6 +57,8 @@ interface TripPlace {
   address: string;
   image?: string;
   category: PlaceCategory;
+  mapx?: string;
+  mapy?: string;
 }
 
 interface TripDay {
@@ -54,6 +71,7 @@ interface Trip {
   title: string;
   startDate: string;
   endDate: string;
+  departure?: string;
   days: TripDay[];
 }
 
@@ -124,13 +142,42 @@ export default function PlanClient() {
   const [newTitle, setNewTitle] = useState('');
   const [newStart, setNewStart] = useState('');
   const [newEnd, setNewEnd] = useState('');
+  const [newDeparture, setNewDeparture] = useState('');
+  const [courseDraft, setCourseDraft] = useState<{
+    title: string;
+    startDate: string;
+    endDate: string;
+    days: { date: string; places: { contentId: string; title: string; address: string; category: string }[] }[];
+  } | null>(null);
 
   useEffect(() => {
     const id = getDeviceId();
     setDeviceId(id);
+    // 코스 draft 확인
+    const draft = localStorage.getItem('course_draft');
+    if (draft) {
+      try { setCourseDraft(JSON.parse(draft)); } catch {}
+      localStorage.removeItem('course_draft');
+    }
     loadTripFromDB(id)
-      .then((t) => setTrip(t))
-      .catch(() => {})
+      .then((t) => {
+        if (t) {
+          // departure는 Supabase에 컬럼 없으므로 로컬 캐시에서 병합
+          const cached = loadTripCache();
+          if (cached && cached.id === t.id && cached.departure) {
+            t.departure = cached.departure;
+          }
+          saveTripCache(t);
+          setTrip(t);
+        } else {
+          const cached = loadTripCache();
+          if (cached) setTrip(cached);
+        }
+      })
+      .catch(() => {
+        const cached = loadTripCache();
+        if (cached) setTrip(cached);
+      })
       .finally(() => setLoaded(true));
   }, []);
 
@@ -146,6 +193,8 @@ export default function PlanClient() {
             address: data.address,
             image: data.image ?? undefined,
             category: contentTypeToCategory(data.contentTypeId),
+            mapx: data.mapx ?? undefined,
+            mapy: data.mapy ?? undefined,
           });
         }
       });
@@ -153,9 +202,9 @@ export default function PlanClient() {
 
   const persistTrip = useCallback(async (updated: Trip) => {
     setTrip(updated);
+    saveTripCache(updated); // 로컬 캐시에 즉시 저장
     setSaving(true);
     setSaveError(null);
-    // state 타이밍 문제 방지: localStorage에서 직접 읽음
     const currentDeviceId = getDeviceId();
     const err = await saveTripToDB(currentDeviceId, updated);
     if (err) setSaveError(err);
@@ -170,11 +219,33 @@ export default function PlanClient() {
       title: newTitle,
       startDate: newStart,
       endDate: newEnd,
+      departure: newDeparture.trim() || undefined,
       days: dates.map(date => ({ date, places: [] })),
     };
     setShowNewTrip(false);
     await persistTrip(newTrip);
   }, [newTitle, newStart, newEnd, persistTrip]);
+
+  const importCourse = useCallback(async () => {
+    if (!courseDraft) return;
+    const newTrip: Trip = {
+      id: Date.now().toString(),
+      title: courseDraft.title,
+      startDate: courseDraft.startDate,
+      endDate: courseDraft.endDate,
+      days: courseDraft.days.map(d => ({
+        date: d.date,
+        places: d.places.map(p => ({
+          contentId: p.contentId,
+          title: p.title,
+          address: p.address,
+          category: (p.category as PlaceCategory) ?? 'attraction',
+        })),
+      })),
+    };
+    setCourseDraft(null);
+    await persistTrip(newTrip);
+  }, [courseDraft, persistTrip]);
 
   const addPlaceToDay = useCallback(async (place: TripPlace, date: string) => {
     if (!trip) return;
@@ -205,9 +276,29 @@ export default function PlanClient() {
   const deleteTrip = useCallback(async () => {
     if (!trip) return;
     await deleteTripFromDB(trip.id);
+    try { localStorage.removeItem(TRIP_CACHE_KEY); } catch {}
     setTrip(null);
   }, [trip]);
 
+  const [dragging, setDragging] = useState<{ date: string; idx: number } | null>(null);
+  const [dragOver, setDragOver] = useState<{ date: string; idx: number } | null>(null);
+
+  const reorderPlace = useCallback(async (date: string, fromIdx: number, toIdx: number) => {
+    if (!trip || fromIdx === toIdx) return;
+    const updated: Trip = {
+      ...trip,
+      days: trip.days.map(d => {
+        if (d.date !== date) return d;
+        const places = [...d.places];
+        const [moved] = places.splice(fromIdx, 1);
+        places.splice(toIdx, 0, moved);
+        return { ...d, places };
+      }),
+    };
+    await persistTrip(updated);
+  }, [trip, persistTrip]);
+
+  const [showMap, setShowMap] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
   const shareTrip = useCallback(() => {
     if (!trip) return;
@@ -237,6 +328,29 @@ export default function PlanClient() {
       </div>
 
       <div className="pt-20 px-4">
+        {/* 코스 import 배너 */}
+        {courseDraft && (
+          <div className="mb-4 bg-gradient-to-r from-sky-50 to-teal-50 border border-sky-200 rounded-2xl p-4">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">🗺️</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-gray-900 leading-tight">{courseDraft.title}</p>
+                <p className="text-xs text-gray-500 mt-0.5">이 코스로 일정을 바로 만들까요?</p>
+                <div className="flex gap-2 mt-2.5">
+                  <button onClick={importCourse}
+                    className="flex-1 bg-sky-500 text-white py-2 rounded-xl text-xs font-bold">
+                    일정으로 만들기
+                  </button>
+                  <button onClick={() => setCourseDraft(null)}
+                    className="px-3 py-2 rounded-xl text-xs text-gray-400 border border-gray-200">
+                    취소
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 여행 없을 때 */}
         {!trip && !showNewTrip && (
           <div className="flex flex-col items-center justify-center py-20 gap-4">
@@ -280,6 +394,16 @@ export default function PlanClient() {
                     className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300" />
                 </div>
               </div>
+              <div>
+                <label className="text-xs text-gray-500 font-medium block mb-1">출발지 (선택)</label>
+                <input
+                  type="text"
+                  placeholder="예: 서울시청, 수원역"
+                  value={newDeparture}
+                  onChange={e => setNewDeparture(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300"
+                />
+              </div>
               <button onClick={createTrip} disabled={!newTitle || !newStart || !newEnd}
                 className="w-full bg-sky-500 disabled:bg-gray-200 disabled:text-gray-400 text-white py-3 rounded-2xl font-semibold text-sm">
                 일정 만들기
@@ -298,106 +422,109 @@ export default function PlanClient() {
                 {formatDate(trip.startDate)} ~ {formatDate(trip.endDate)}
                 <span className="ml-2">({trip.days.length}일)</span>
               </p>
+              {trip.departure && (
+                <p className="text-xs opacity-70 mb-0.5">🏠 {trip.departure} 출발</p>
+              )}
               <h2 className="text-lg font-bold leading-tight">{trip.title}</h2>
-              <div className="flex justify-between items-center mt-3">
-                <div className="flex gap-3">
-                  {CATEGORY_ORDER.map(cat => {
-                    const count = trip.days.flatMap(d => d.places).filter(p => p.category === cat).length;
-                    if (count === 0) return null;
-                    const { emoji, label } = CATEGORY_META[cat];
-                    return (
-                      <span key={cat} className="text-xs opacity-80">
-                        {emoji} {label} {count}
-                      </span>
-                    );
-                  })}
-                </div>
-                <div className="flex gap-3 items-center">
-                  <button onClick={shareTrip} className="text-xs opacity-80 bg-white/20 rounded-lg px-2.5 py-1 font-medium">
-                    {shareCopied ? '✓ 복사됨!' : '🔗 공유'}
-                  </button>
-                  <button onClick={deleteTrip} className="text-xs opacity-60 underline">삭제</button>
-                </div>
+              <div className="flex gap-3 mt-2 flex-wrap">
+                {CATEGORY_ORDER.map(cat => {
+                  const count = trip.days.flatMap(d => d.places).filter(p => p.category === cat).length;
+                  if (count === 0) return null;
+                  const { emoji, label } = CATEGORY_META[cat];
+                  return (
+                    <span key={cat} className="text-xs opacity-80">
+                      {emoji} {label} {count}
+                    </span>
+                  );
+                })}
               </div>
+              <div className="grid grid-cols-2 gap-2 mt-3">
+                <button
+                  onClick={() => setShowMap(true)}
+                  className="flex items-center justify-center gap-1.5 bg-white/20 rounded-xl py-3 text-sm font-bold text-white active:bg-white/30"
+                >
+                  🗺️ 지도로 보기
+                </button>
+                <button
+                  onClick={shareTrip}
+                  className="flex items-center justify-center gap-1.5 bg-white/20 rounded-xl py-3 text-sm font-bold text-white active:bg-white/30"
+                >
+                  {shareCopied ? '✓ 복사됨!' : '🔗 링크 공유'}
+                </button>
+              </div>
+              <button onClick={deleteTrip} className="mt-1.5 text-xs text-white/40 text-right w-full py-1">
+                일정 삭제
+              </button>
             </div>
 
             {/* 날짜별 카드 */}
-            {trip.days.map((day, dayIdx) => {
-              const byCategory = CATEGORY_ORDER.reduce<Record<PlaceCategory, TripPlace[]>>((acc, cat) => {
-                acc[cat] = day.places.filter(p => p.category === cat);
-                return acc;
-              }, { attraction: [], dining: [], accommodation: [], shopping: [] });
+            {trip.days.map((day, dayIdx) => (
+              <div key={day.date} className="mb-4">
+                <div className="flex items-center gap-2 mb-2 px-1">
+                  <span className="text-xs font-bold text-sky-600 bg-sky-50 rounded-full px-2 py-0.5">
+                    Day {dayIdx + 1}
+                  </span>
+                  <span className="text-xs text-gray-500">{formatDate(day.date)}</span>
+                </div>
 
-              const hasAny = day.places.length > 0;
+                <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                  {day.places.length === 0 && (
+                    <div className="px-4 py-5 text-center">
+                      <p className="text-sm text-gray-300">장소를 추가해보세요</p>
+                    </div>
+                  )}
 
-              return (
-                <div key={day.date} className="mb-4">
-                  <div className="flex items-center gap-2 mb-2 px-1">
-                    <span className="text-xs font-bold text-sky-600 bg-sky-50 rounded-full px-2 py-0.5">
-                      Day {dayIdx + 1}
-                    </span>
-                    <span className="text-xs text-gray-500">{formatDate(day.date)}</span>
-                  </div>
-
-                  <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-                    {!hasAny && (
-                      <div className="px-4 py-5 text-center">
-                        <p className="text-sm text-gray-300">장소를 추가해보세요</p>
-                      </div>
-                    )}
-
-                    {/* 카테고리별 섹션 */}
-                    {hasAny && CATEGORY_ORDER.map(cat => {
-                      const places = byCategory[cat];
-                      if (places.length === 0) return null;
-                      const { label, emoji, color } = CATEGORY_META[cat];
-
+                  {/* 드래그 정렬 플랫 리스트 */}
+                  <div className="divide-y divide-gray-50">
+                    {day.places.map((place, placeIdx) => {
+                      const { emoji, color, label } = CATEGORY_META[place.category];
+                      const isDragging = dragging?.date === day.date && dragging?.idx === placeIdx;
+                      const isDragOver = dragOver?.date === day.date && dragOver?.idx === placeIdx;
                       return (
-                        <div key={cat}>
-                          {/* 카테고리 헤더 */}
-                          <div className={`flex items-center gap-1.5 px-4 py-2 ${color}`}>
-                            <span className="text-sm">{emoji}</span>
-                            <span className="text-xs font-bold">{label}</span>
+                        <div
+                          key={place.contentId}
+                          draggable
+                          onDragStart={() => setDragging({ date: day.date, idx: placeIdx })}
+                          onDragOver={e => { e.preventDefault(); setDragOver({ date: day.date, idx: placeIdx }); }}
+                          onDrop={() => {
+                            if (dragging?.date === day.date) reorderPlace(day.date, dragging.idx, placeIdx);
+                            setDragging(null); setDragOver(null);
+                          }}
+                          onDragEnd={() => { setDragging(null); setDragOver(null); }}
+                          className={`flex items-center gap-2 px-3 py-3 transition-all ${isDragging ? 'opacity-40' : ''} ${isDragOver ? 'bg-sky-50 border-l-2 border-sky-400' : ''}`}
+                        >
+                          <span className="text-gray-300 cursor-grab active:cursor-grabbing flex-shrink-0 select-none text-base leading-none">⠿</span>
+                          {place.image ? (
+                            <img src={place.image} alt={place.title} className="w-10 h-10 rounded-xl object-cover flex-shrink-0" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-base flex-shrink-0">{emoji}</div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1 mb-0.5">
+                              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${color}`}>{emoji} {label}</span>
+                            </div>
+                            <p className="text-sm font-semibold text-gray-900 truncate">{place.title}</p>
+                            <p className="text-xs text-gray-400 truncate">{place.address}</p>
                           </div>
-
-                          <div className="divide-y divide-gray-50">
-                            {places.map((place) => (
-                              <div key={place.contentId} className="flex items-center gap-3 px-4 py-3">
-                                {place.image ? (
-                                  <img src={place.image} alt={place.title}
-                                    className="w-12 h-12 rounded-xl object-cover flex-shrink-0" />
-                                ) : (
-                                  <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center text-xl flex-shrink-0">
-                                    {emoji}
-                                  </div>
-                                )}
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-semibold text-gray-900 truncate">{place.title}</p>
-                                  <p className="text-xs text-gray-400 truncate mt-0.5">{place.address}</p>
-                                </div>
-                                <button
-                                  onClick={() => removePlace(day.date, place.contentId)}
-                                  className="text-gray-300 text-lg ml-1 flex-shrink-0"
-                                >×</button>
-                              </div>
-                            ))}
-                          </div>
+                          <button onClick={() => removePlace(day.date, place.contentId)} className="text-gray-300 text-lg flex-shrink-0">×</button>
                         </div>
                       );
                     })}
+                  </div>
 
-                    <div className="border-t border-gray-50">
-                      <Link
-                        href={`/explore?day=${day.date}`}
-                        className="flex items-center justify-center gap-1 px-4 py-3 text-sm text-sky-500 font-medium"
-                      >
-                        + 장소 추가
-                      </Link>
-                    </div>
+                  <div className="border-t border-gray-50">
+                    <Link
+                      href="/explore"
+                      className="flex items-center justify-center gap-1 px-4 py-3 text-sm text-sky-500 font-medium"
+                    >
+                      + 장소 추가
+                    </Link>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            ))}
+            {/* 여행 준비 체크리스트 */}
+            <ChecklistSection tripId={trip.id} />
           </>
         )}
       </div>
@@ -443,21 +570,27 @@ export default function PlanClient() {
         </div>
       )}
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-5 py-3 flex justify-around">
-        {[
-          { href: '/', label: '홈', emoji: '🏠' },
-          { href: '/explore', label: '탐색', emoji: '🔍' },
-          { href: '/plan', label: '일정', emoji: '📅' },
-          { href: '/journal', label: '일지', emoji: '📔' },
-          { href: '/stamp', label: '스탬프', emoji: '🗺️' },
-        ].map(({ href, label, emoji }) => (
-          <Link key={href} href={href}
-            className={`flex flex-col items-center gap-0.5 ${href === '/plan' ? 'text-sky-500' : ''}`}>
-            <span className="text-xl">{emoji}</span>
-            <span className={`text-xs ${href === '/plan' ? 'text-sky-500 font-semibold' : 'text-gray-500'}`}>{label}</span>
-          </Link>
-        ))}
-      </nav>
+      <BottomNav />
+
+      {/* 지도 뷰 */}
+      {showMap && trip && (
+        <PlanMapView
+          places={trip.days.flatMap((day, dayIdx) =>
+            day.places.map((p, idxInDay) => ({
+              title: p.title,
+              address: p.address,
+              mapx: p.mapx,
+              mapy: p.mapy,
+              dayIdx,
+              idxInDay,
+              category: p.category,
+            }))
+          )}
+          dayCount={trip.days.length}
+          departure={trip.departure}
+          onClose={() => setShowMap(false)}
+        />
+      )}
     </main>
   );
 }

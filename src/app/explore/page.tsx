@@ -3,16 +3,24 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import BottomNav from '@/components/BottomNav';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { GANGWON_SIGUNGU, TRAVEL_THEMES, AGE_GROUPS, type TravelTheme, type AgeGroup, type TravelSearchParams } from '@/types';
+import { getChildProfile } from '@/lib/childProfile';
 
 interface PlaceItem {
   contentid: string;
   title: string;
   addr1: string;
   firstimage?: string;
-  cat2: string;
+  cat2?: string;
   mapx: string;
   mapy: string;
+  parking?: string;
+  restroom?: string;
+  stroller?: string;
 }
 
 interface WeatherInfo {
@@ -42,11 +50,15 @@ function ExploreContent() {
   const [selectedThemes, setSelectedThemes] = useState<TravelTheme[]>(
     searchParams.get('theme') ? [searchParams.get('theme') as TravelTheme] : []
   );
-  const [selectedAge, setSelectedAge] = useState<AgeGroup>(
-    (searchParams.get('age') as AgeGroup) ?? 'toddler'
-  );
+  const [selectedAge, setSelectedAge] = useState<AgeGroup>(() => {
+    if (searchParams.get('age')) return searchParams.get('age') as AgeGroup;
+    const profile = getChildProfile();
+    return profile?.ageGroup ?? 'toddler';
+  });
   const [selectedSigungu, setSelectedSigungu] = useState('');
   const [strollerRequired, setStrollerRequired] = useState(false);
+  const [parkingRequired, setParkingRequired] = useState(false);
+  const [restroomRequired, setRestroomRequired] = useState(false);
   const [places, setPlaces] = useState<PlaceItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
@@ -100,6 +112,8 @@ function ExploreContent() {
         transport: 'car',
         nights: 1,
         strollerRequired,
+        parkingRequired,
+        restroomRequired,
         sigungu: selectedSigungu || undefined,
       };
       const res = await fetch('/api/tour/recommend', {
@@ -119,54 +133,61 @@ function ExploreContent() {
   return (
     <main className="min-h-screen bg-gray-50 pb-24">
       {/* 헤더 */}
-      <header className="bg-white px-5 pt-12 pb-4 border-b border-gray-100">
-        <button onClick={() => router.back()} className="text-gray-400 text-sm mb-3">← 뒤로</button>
-        <h1 className="text-2xl font-bold text-gray-900">여행지 탐색</h1>
-        <p className="text-sm text-gray-500 mt-1">강원도 18개 시군 · 아이 맞춤 추천</p>
-      </header>
-
-      {/* 탭 */}
-      <div className="flex bg-white border-b border-gray-100">
-        {([
-          { id: 'filter', label: '🔍 조건 검색' },
-          { id: 'search', label: '✏️ 직접 검색' },
-          { id: 'course', label: '🗺️ 추천 코스' },
-        ] as const).map(t => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`flex-1 py-3 text-xs font-semibold transition-colors ${tab === t.id ? 'text-sky-500 border-b-2 border-sky-500' : 'text-gray-400'}`}
-          >
-            {t.label}
+      <header className="bg-white px-4 pt-12 pb-0 border-b border-gray-100">
+        <div className="flex items-center gap-2 pb-3">
+          <button onClick={() => router.back()} className="w-10 h-10 flex items-center justify-center rounded-full active:bg-gray-100 -ml-2 flex-shrink-0">
+            <span className="text-gray-700 text-lg">←</span>
           </button>
-        ))}
-      </div>
+          <h1 className="text-lg font-bold text-gray-900">여행지 탐색</h1>
+        </div>
+
+        {/* 탭 */}
+        <div className="flex">
+          {([
+            { id: 'filter', label: '조건 검색' },
+            { id: 'search', label: '직접 검색' },
+            { id: 'course', label: '추천 코스' },
+          ] as const).map(t => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`flex-1 py-3 text-sm font-semibold transition-colors ${
+                tab === t.id
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-400'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </header>
 
       {/* 키워드 검색 */}
       {tab === 'search' && (
-        <div className="px-5 py-4 bg-white mb-2 border-b border-gray-100">
+        <div className="px-4 py-4 bg-white mb-2 border-b border-gray-100">
           <div className="flex gap-2">
             <input
               value={keyword}
               onChange={e => setKeyword(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleKeywordSearch()}
-              placeholder="여행지 이름으로 검색 (예: 속초, 낙산사)"
-              className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300"
+              placeholder="여행지 검색 (예: 속초, 낙산사)"
+              className="flex-1 border border-gray-200 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 bg-gray-50"
             />
-            <button
+            <Button
               onClick={handleKeywordSearch}
               disabled={loading}
-              className="bg-sky-500 text-white px-4 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-60"
+              className="rounded-2xl px-5 text-sm font-bold h-auto py-3.5"
             >
               검색
-            </button>
+            </Button>
           </div>
-          <div className="flex gap-2 mt-3 flex-wrap">
+          <div className="flex gap-2 mt-3 overflow-x-auto pb-1 scrollbar-hide">
             {['속초 해수욕장', '경포대', '오대산', '레일바이크', '닭갈비'].map(q => (
               <button
                 key={q}
-                onClick={() => { setKeyword(q); }}
-                className="text-xs text-gray-500 bg-gray-100 rounded-full px-3 py-1.5"
+                onClick={() => setKeyword(q)}
+                className="flex-shrink-0 text-xs font-medium px-3.5 py-2 rounded-full bg-gray-100 text-gray-600 active:bg-gray-200"
               >
                 {q}
               </button>
@@ -192,12 +213,12 @@ function ExploreContent() {
                 {c.firstimage ? (
                   <img src={c.firstimage} alt={c.title} className="w-24 h-20 rounded-xl object-cover flex-shrink-0" />
                 ) : (
-                  <div className="w-24 h-20 rounded-xl bg-gradient-to-br from-sky-50 to-teal-50 flex items-center justify-center text-3xl flex-shrink-0">🗺️</div>
+                  <div className="w-24 h-20 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center text-3xl flex-shrink-0">🗺️</div>
                 )}
                 <div className="flex-1 min-w-0 py-1">
                   <p className="font-semibold text-gray-800 text-sm leading-snug line-clamp-2">{c.title}</p>
                   <p className="text-xs text-gray-400 mt-1 line-clamp-2">{c.addr1}</p>
-                  <span className="inline-block mt-2 text-[10px] bg-sky-50 text-sky-600 rounded-full px-2 py-0.5 font-medium">여행코스</span>
+                  <span className="inline-block mt-2 text-[10px] bg-blue-50 text-blue-600 rounded-full px-2 py-0.5 font-medium">여행코스</span>
                 </div>
               </Link>
             ))}
@@ -255,7 +276,7 @@ function ExploreContent() {
                 onClick={() => setSelectedAge(key as AgeGroup)}
                 className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                   selectedAge === key
-                    ? 'bg-sky-500 text-white border-sky-500'
+                    ? 'bg-blue-600 text-white border-blue-600'
                     : 'bg-white text-gray-600 border-gray-200'
                 }`}
               >
@@ -275,7 +296,7 @@ function ExploreContent() {
                 onClick={() => toggleTheme(key as TravelTheme)}
                 className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                   selectedThemes.includes(key as TravelTheme)
-                    ? 'bg-sky-500 text-white border-sky-500'
+                    ? 'bg-blue-600 text-white border-blue-600'
                     : 'bg-white text-gray-600 border-gray-200'
                 }`}
               >
@@ -285,78 +306,111 @@ function ExploreContent() {
           </div>
         </div>
 
-        {/* 유모차 필터 */}
-        <div className="flex items-center gap-2 mb-4">
-          <button
-            onClick={() => setStrollerRequired(v => !v)}
-            className={`w-10 h-6 rounded-full transition-colors ${strollerRequired ? 'bg-sky-500' : 'bg-gray-200'}`}
-          >
-            <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform mx-0.5 ${strollerRequired ? 'translate-x-4' : ''}`} />
-          </button>
-          <span className="text-sm text-gray-700">유모차 접근 가능한 곳만</span>
+        {/* 편의시설 필터 */}
+        <div className="mb-4">
+          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">편의시설</label>
+          <div className="flex flex-col gap-2">
+            {[
+              { state: strollerRequired, setter: setStrollerRequired, label: '🛒 유모차 접근 가능' },
+              { state: parkingRequired, setter: setParkingRequired, label: '🅿️ 주차장 있음' },
+              { state: restroomRequired, setter: setRestroomRequired, label: '🚻 화장실 있음' },
+            ].map(({ state, setter, label }) => (
+              <div key={label} className="flex items-center gap-2">
+                <button
+                  onClick={() => setter(v => !v)}
+                  className={`w-10 h-6 rounded-full transition-colors flex-shrink-0 ${state ? 'bg-blue-600' : 'bg-gray-200'}`}
+                >
+                  <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform mx-0.5 ${state ? 'translate-x-4' : ''}`} />
+                </button>
+                <span className="text-sm text-gray-700">{label}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <button
+        <Button
           onClick={handleSearch}
           disabled={loading}
-          className="w-full bg-sky-500 text-white py-3 rounded-xl font-semibold disabled:opacity-60"
+          className="w-full rounded-xl py-3 font-semibold h-auto"
         >
           {loading ? '검색 중...' : '여행지 찾기'}
-        </button>
+        </Button>
       </section>}
 
       {/* 결과 (필터·검색 탭) */}
       {tab !== 'course' && <section className="px-5 py-4">
-        {!searched && (
-          <p className="text-center text-gray-400 text-sm mt-8">
-            {tab === 'filter' ? '조건을 선택하고 여행지를 찾아보세요' : '검색어를 입력해보세요'}
-          </p>
-        )}
-
-        {searched && !loading && places.length === 0 && (
-          <p className="text-center text-gray-400 text-sm mt-8">조건에 맞는 여행지가 없어요 😅<br />조건을 바꿔 다시 시도해보세요.</p>
-        )}
-
-        <div className="grid grid-cols-2 gap-3">
-          {places.map(place => (
-            <Link
-              key={place.contentid}
-              href={`/explore/${place.contentid}`}
-              className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 active:scale-95 transition-transform"
-            >
-              {place.firstimage ? (
-                <img
-                  src={place.firstimage}
-                  alt={place.title}
-                  className="w-full h-32 object-cover"
-                />
-              ) : (
-                <div className="w-full h-32 bg-gray-100 flex items-center justify-center text-3xl">🏔️</div>
-              )}
-              <div className="p-3">
-                <p className="font-semibold text-gray-800 text-sm leading-tight line-clamp-2">{place.title}</p>
-                <p className="text-xs text-gray-400 mt-1 line-clamp-1">{place.addr1}</p>
+        {/* 스켈레톤 로딩 */}
+        {loading && (
+          <div className="grid grid-cols-2 gap-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-2xl overflow-hidden border border-gray-100">
+                <Skeleton className="w-full h-32" />
+                <div className="p-3 space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-3 w-2/3" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
               </div>
-            </Link>
-          ))}
-        </div>
-      </section>}
+            ))}
+          </div>
+        )}
 
-      {/* 하단 네비게이션 */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-5 py-3 flex justify-around">
-        {[
-          { href: '/', label: '홈', emoji: '🏠' },
-          { href: '/explore', label: '탐색', emoji: '🔍' },
-          { href: '/plan', label: '일정', emoji: '📅' },
-          { href: '/journal', label: '일지', emoji: '📔' },
-          { href: '/stamp', label: '스탬프', emoji: '🗺️' },
-        ].map(({ href, label, emoji }) => (
-          <Link key={href} href={href} className="flex flex-col items-center gap-0.5">
-            <span className="text-xl">{emoji}</span>
-            <span className={`text-xs ${href === '/explore' ? 'text-sky-500 font-medium' : 'text-gray-500'}`}>{label}</span>
-          </Link>
-        ))}
-      </nav>
+        {!loading && !searched && (
+          <div className="flex flex-col items-center py-16 gap-3">
+            <span className="text-5xl">🗺️</span>
+            <p className="text-sm text-gray-400 text-center">
+              {tab === 'filter' ? '조건을 선택하고 여행지를 찾아보세요' : '검색어를 입력해보세요'}
+            </p>
+          </div>
+        )}
+
+        {!loading && searched && places.length === 0 && (
+          <div className="flex flex-col items-center py-16 gap-3">
+            <span className="text-5xl">😅</span>
+            <p className="text-sm text-gray-400 text-center">조건에 맞는 여행지가 없어요<br />조건을 바꿔 다시 시도해보세요.</p>
+          </div>
+        )}
+
+        {!loading && (
+          <div className="grid grid-cols-2 gap-3">
+            {places.map(place => (
+              <Link
+                key={place.contentid}
+                href={`/explore/${place.contentid}`}
+                className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 active:scale-95 transition-transform"
+              >
+                {place.firstimage ? (
+                  <img
+                    src={place.firstimage}
+                    alt={place.title}
+                    className="w-full h-32 object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-32 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center text-3xl">🏔️</div>
+                )}
+                <div className="p-3">
+                  <p className="font-semibold text-gray-800 text-sm leading-tight line-clamp-2">{place.title}</p>
+                  <p className="text-xs text-gray-400 mt-1 line-clamp-1">{place.addr1}</p>
+                  {(place.parking || place.restroom || place.stroller) && (
+                    <div className="flex gap-1 mt-1.5 flex-wrap">
+                      {place.parking && place.parking !== '0' && place.parking !== 'N' && (
+                        <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-blue-50 text-blue-600 border-blue-100">🅿️ 주차</Badge>
+                      )}
+                      {place.restroom && place.restroom !== '0' && place.restroom !== 'N' && (
+                        <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-green-50 text-green-600 border-green-100">🚻 화장실</Badge>
+                      )}
+                      {place.stroller && place.stroller !== '0' && place.stroller !== 'N' && (
+                        <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-blue-50 text-blue-600 border-blue-100">🛒 유모차</Badge>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>}
+      <BottomNav />
     </main>
   );
 }

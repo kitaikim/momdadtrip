@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import BottomNav from '@/components/BottomNav';
 import { db } from '@/lib/supabase';
 
 const DEVICE_KEY = 'momdadtrip_device_id';
@@ -237,26 +238,7 @@ export default function MissionClient() {
           </div>
         </div>
       )}
-
-      {/* 하단 네비게이션 */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-5 py-3 flex justify-around">
-        {[
-          { href: '/', label: '홈', emoji: '🏠' },
-          { href: '/explore', label: '탐색', emoji: '🔍' },
-          { href: '/plan', label: '일정', emoji: '📅' },
-          { href: '/journal', label: '일지', emoji: '📔' },
-          { href: '/stamp', label: '스탬프', emoji: '🗺️' },
-        ].map(({ href, label, emoji }) => (
-          <Link
-            key={href}
-            href={href}
-            className="flex flex-col items-center gap-0.5"
-          >
-            <span className="text-xl">{emoji}</span>
-            <span className="text-xs text-gray-500">{label}</span>
-          </Link>
-        ))}
-      </nav>
+      <BottomNav />
     </main>
   );
 }

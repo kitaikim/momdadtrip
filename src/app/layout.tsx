@@ -1,12 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import localFont from 'next/font/local';
 import './globals.css';
-
-const geistSans = localFont({
-  src: './fonts/GeistVF.woff',
-  variable: '--font-geist-sans',
-  weight: '100 900',
-});
 
 export const metadata: Metadata = {
   title: '엄마랑 아빠랑 — 강원도 가족여행 플래너',
@@ -36,7 +29,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko">
-      <body className={`${geistSans.variable} antialiased`}>
+      <body className="antialiased">
         {children}
       </body>
     </html>

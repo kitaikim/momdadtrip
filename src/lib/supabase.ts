@@ -61,3 +61,23 @@ export const db = {
     }
   },
 };
+
+export const storage = {
+  async upload(bucket: string, path: string, file: File): Promise<{ url: string | null; error: string | null }> {
+    if (!SUPABASE_URL || !SUPABASE_KEY) return { url: null, error: 'Supabase 환경변수 미설정' };
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 30000);
+      const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`, {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': file.type },
+        body: file,
+        signal: controller.signal,
+      }).finally(() => clearTimeout(timer));
+      if (!res.ok) return { url: null, error: await res.text() };
+      return { url: `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`, error: null };
+    } catch (e) {
+      return { url: null, error: String(e) };
+    }
+  },
+};

@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { db } from '@/lib/supabase';
+import BottomNav from '@/components/BottomNav';
+import { db, storage } from '@/lib/supabase';
 
 const DEVICE_KEY = 'momdadtrip_device_id';
 
@@ -40,7 +41,17 @@ interface JournalEntry {
   date: string;
   memo: string;
   photo_url?: string;
+  mood?: string;
+  child_quote?: string;
 }
+
+const MOOD_OPTIONS = [
+  { emoji: '🤩', label: '최고' },
+  { emoji: '😊', label: '좋음' },
+  { emoji: '😮', label: '신기' },
+  { emoji: '🥹', label: '감동' },
+  { emoji: '😴', label: '피곤' },
+];
 
 function formatDate(dateStr: string) {
   const d = new Date(dateStr);
@@ -67,19 +78,22 @@ async function loadEntries(deviceId: string, tripId: string): Promise<JournalEnt
     date: r.date as string,
     memo: (r.memo as string) ?? '',
     photo_url: r.photo_url as string | undefined,
+    mood: r.mood as string | undefined,
+    child_quote: r.child_quote as string | undefined,
   }));
 }
 
-async function saveEntry(deviceId: string, tripId: string, date: string, memo: string, existingId?: string): Promise<string> {
+async function saveEntry(
+  deviceId: string, tripId: string, date: string, memo: string,
+  photoUrl?: string | null, mood?: string | null, childQuote?: string | null,
+  existingId?: string
+): Promise<string> {
   const id = existingId ?? `${tripId}_${date}`;
-  await db.upsert('journal_entries', {
-    id,
-    device_id: deviceId,
-    trip_id: tripId,
-    date,
-    memo,
-    updated_at: new Date().toISOString(),
-  });
+  const record: Record<string, unknown> = { id, device_id: deviceId, trip_id: tripId, date, memo, updated_at: new Date().toISOString() };
+  if (photoUrl !== undefined) record.photo_url = photoUrl;
+  if (mood !== undefined) record.mood = mood;
+  if (childQuote !== undefined) record.child_quote = childQuote;
+  await db.upsert('journal_entries', record);
   return id;
 }
 
@@ -96,6 +110,10 @@ export default function JournalClient() {
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [deviceId, setDeviceId] = useState('');
+  const [draftPhoto, setDraftPhoto] = useState<string | null>(null);
+  const [draftMood, setDraftMood] = useState<string | null>(null);
+  const [draftChildQuote, setDraftChildQuote] = useState('');
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [aiContent, setAiContent] = useState<AiContent | null>(null);
   const [generating, setGenerating] = useState(false);
   const [aiTab, setAiTab] = useState<'blog' | 'sns'>('blog');
@@ -121,7 +139,29 @@ export default function JournalClient() {
   const startEdit = useCallback((date: string) => {
     setEditingDate(date);
     setDraftMemo(entries[date]?.memo ?? '');
+    setDraftPhoto(entries[date]?.photo_url ?? null);
+    setDraftMood(entries[date]?.mood ?? null);
+    setDraftChildQuote(entries[date]?.child_quote ?? '');
   }, [entries]);
+
+  const handlePhotoChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>, date: string) => {
+    const file = e.target.files?.[0];
+    if (!file || !trip) return;
+    // 미리보기 즉시 표시
+    const preview = URL.createObjectURL(file);
+    setDraftPhoto(preview);
+    setUploadingPhoto(true);
+    const ext = file.name.split('.').pop() ?? 'jpg';
+    const path = `${deviceId}/${trip.id}_${date}.${ext}`;
+    const { url, error } = await storage.upload('journal-photos', path, file);
+    setUploadingPhoto(false);
+    if (error || !url) {
+      setDraftPhoto(null);
+      alert('사진 업로드에 실패했어요. Supabase 스토리지 버킷을 확인해주세요.');
+      return;
+    }
+    setDraftPhoto(url);
+  }, [trip, deviceId]);
 
   const generateAiContent = useCallback(async () => {
     if (!trip) return;
@@ -163,14 +203,18 @@ export default function JournalClient() {
     if (!trip || !editingDate) return;
     setSaving(true);
     const existing = entries[editingDate];
-    const id = await saveEntry(deviceId, trip.id, editingDate, draftMemo, existing?.id);
+    const photoToSave = draftPhoto?.startsWith('blob:') ? existing?.photo_url ?? null : draftPhoto;
+    const id = await saveEntry(deviceId, trip.id, editingDate, draftMemo, photoToSave, draftMood, draftChildQuote || null, existing?.id);
     setEntries(prev => ({
       ...prev,
-      [editingDate]: { id, date: editingDate, memo: draftMemo },
+      [editingDate]: { id, date: editingDate, memo: draftMemo, photo_url: photoToSave ?? undefined, mood: draftMood ?? undefined, child_quote: draftChildQuote || undefined },
     }));
     setEditingDate(null);
+    setDraftPhoto(null);
+    setDraftMood(null);
+    setDraftChildQuote('');
     setSaving(false);
-  }, [trip, editingDate, draftMemo, entries, deviceId]);
+  }, [trip, editingDate, draftMemo, draftPhoto, draftMood, draftChildQuote, entries, deviceId]);
 
   if (!loaded) {
     return (
@@ -313,28 +357,115 @@ export default function JournalClient() {
                       </div>
                     )}
 
+                    {/* 사진 (표시 모드) */}
+                    {!isEditing && entry?.photo_url && (
+                      <div className="px-4 pt-2">
+                        <img
+                          src={entry.photo_url}
+                          alt="여행 사진"
+                          className="w-full h-48 object-cover rounded-xl"
+                        />
+                      </div>
+                    )}
+
+                    {/* 기분·아이의 한마디 (표시 모드) */}
+                    {!isEditing && (entry?.mood || entry?.child_quote) && (
+                      <div className="px-4 pt-2 flex items-center gap-2">
+                        {entry.mood && <span className="text-xl">{entry.mood}</span>}
+                        {entry.child_quote && (
+                          <p className="text-sm text-gray-500 italic">"{entry.child_quote}"</p>
+                        )}
+                      </div>
+                    )}
+
                     {/* 메모 영역 */}
                     <div className="px-4 pb-4 pt-2">
                       {isEditing ? (
                         <div className="flex flex-col gap-2">
+                          {/* 사진 업로드 */}
+                          <label className="relative block cursor-pointer">
+                            {draftPhoto ? (
+                              <div className="relative">
+                                <img
+                                  src={draftPhoto}
+                                  alt="업로드된 사진"
+                                  className="w-full h-40 object-cover rounded-xl"
+                                />
+                                {uploadingPhoto && (
+                                  <div className="absolute inset-0 bg-black/40 rounded-xl flex items-center justify-center">
+                                    <span className="text-white text-sm">업로드 중...</span>
+                                  </div>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => setDraftPhoto(null)}
+                                  className="absolute top-2 right-2 bg-black/50 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
+                                >×</button>
+                              </div>
+                            ) : (
+                              <div className="w-full h-24 rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-1 text-gray-400">
+                                <span className="text-2xl">📷</span>
+                                <span className="text-xs">사진 추가</span>
+                              </div>
+                            )}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={e => handlePhotoChange(e, day.date)}
+                            />
+                          </label>
+
+                          {/* 기분 이모지 */}
+                          <div>
+                            <p className="text-xs text-gray-400 mb-1.5">오늘 여행 기분은?</p>
+                            <div className="flex gap-2">
+                              {MOOD_OPTIONS.map(({ emoji, label }) => (
+                                <button
+                                  key={emoji}
+                                  type="button"
+                                  onClick={() => setDraftMood(draftMood === emoji ? null : emoji)}
+                                  className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl border transition-all ${
+                                    draftMood === emoji ? 'border-sky-400 bg-sky-50' : 'border-gray-100 bg-gray-50'
+                                  }`}
+                                >
+                                  <span className="text-xl">{emoji}</span>
+                                  <span className="text-[9px] text-gray-500">{label}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* 아이의 한마디 */}
+                          <div>
+                            <p className="text-xs text-gray-400 mb-1.5">아이의 한마디 💬</p>
+                            <input
+                              type="text"
+                              value={draftChildQuote}
+                              onChange={e => setDraftChildQuote(e.target.value)}
+                              placeholder="예: 엄마 또 오고 싶어! 🥰"
+                              maxLength={50}
+                              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300 placeholder-gray-300"
+                            />
+                          </div>
+
                           <textarea
                             value={draftMemo}
                             onChange={e => setDraftMemo(e.target.value)}
-                            placeholder="오늘 여행은 어땠나요? 아이의 반응, 기억에 남는 순간을 기록해보세요 ✏️"
-                            rows={4}
-                            autoFocus
+                            placeholder="오늘 여행은 어땠나요? 기억에 남는 순간을 기록해보세요 ✏️"
+                            rows={3}
                             className="w-full text-sm text-gray-700 placeholder-gray-300 border border-gray-200 rounded-xl px-3 py-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-sky-300"
                           />
                           <div className="flex gap-2">
                             <button
                               onClick={saveMemo}
-                              disabled={saving}
+                              disabled={saving || uploadingPhoto}
                               className="flex-1 bg-sky-500 disabled:bg-gray-200 text-white py-2.5 rounded-xl text-sm font-semibold"
                             >
                               {saving ? '저장 중...' : '저장'}
                             </button>
                             <button
-                              onClick={() => setEditingDate(null)}
+                              onClick={() => { setEditingDate(null); setDraftPhoto(null); }}
                               className="px-4 py-2.5 rounded-xl text-sm text-gray-400 border border-gray-200"
                             >
                               취소
@@ -365,28 +496,7 @@ export default function JournalClient() {
           </>
         )}
       </div>
-
-      {/* 하단 네비게이션 */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-5 py-3 flex justify-around">
-        {[
-          { href: '/', label: '홈', emoji: '🏠' },
-          { href: '/explore', label: '탐색', emoji: '🔍' },
-          { href: '/plan', label: '일정', emoji: '📅' },
-          { href: '/journal', label: '일지', emoji: '📔' },
-          { href: '/stamp', label: '스탬프', emoji: '🗺️' },
-        ].map(({ href, label, emoji }) => (
-          <Link
-            key={href}
-            href={href}
-            className={`flex flex-col items-center gap-0.5 ${href === '/journal' ? 'text-sky-500' : ''}`}
-          >
-            <span className="text-xl">{emoji}</span>
-            <span className={`text-xs ${href === '/journal' ? 'text-sky-500 font-semibold' : 'text-gray-500'}`}>
-              {label}
-            </span>
-          </Link>
-        ))}
-      </nav>
+      <BottomNav />
     </main>
   );
 }

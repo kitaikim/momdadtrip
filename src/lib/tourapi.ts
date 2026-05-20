@@ -151,6 +151,8 @@ export interface BarrierFreeItem {
   lactationroom?: string;
   babysparechair?: string;
   infantsfamilyetc?: string;
+  parking?: string;
+  restroom?: string;
 }
 
 export async function getBarrierFreeList(params: {

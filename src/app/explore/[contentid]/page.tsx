@@ -1,5 +1,6 @@
 import { getDetailCommon, getBarrierFreeDetail, getLocationBasedList } from '@/lib/tourapi';
 import Link from 'next/link';
+import BottomNav from '@/components/BottomNav';
 import { notFound } from 'next/navigation';
 import KakaoMap from './KakaoMap';
 
@@ -41,12 +42,20 @@ export default async function PlaceDetailPage({
     : [];
 
   return (
-    <main className="min-h-screen bg-white pb-24">
-      {/* 뒤로가기 */}
-      <div className="fixed top-0 left-0 right-0 z-10 flex items-center px-4 pt-12 pb-3 bg-white/90 backdrop-blur-sm border-b border-gray-100">
-        <Link href="/explore" className="text-gray-500 text-sm flex items-center gap-1">
-          ← 탐색으로
+    <main className="min-h-screen bg-white pb-36">
+      {/* 상단 앱바 */}
+      <div className="fixed top-0 left-0 right-0 z-10 flex items-center justify-between px-4 pt-12 pb-3 bg-white/90 backdrop-blur-sm border-b border-gray-100">
+        <Link href="/explore" className="w-10 h-10 flex items-center justify-center rounded-full active:bg-gray-100 -ml-2">
+          <span className="text-gray-700 text-lg">←</span>
         </Link>
+        <p className="text-sm font-semibold text-gray-900 truncate max-w-[60%]">{place.title}</p>
+        <a
+          href={`https://map.kakao.com/link/map/${encodeURIComponent(place.title)},${place.mapy},${place.mapx}`}
+          target="_blank" rel="noopener noreferrer"
+          className="w-10 h-10 flex items-center justify-center rounded-full active:bg-gray-100 -mr-2"
+        >
+          <span className="text-xl">🗺️</span>
+        </a>
       </div>
 
       {/* 이미지 */}
@@ -55,10 +64,10 @@ export default async function PlaceDetailPage({
           <img
             src={place.firstimage}
             alt={place.title}
-            className="w-full h-60 object-cover"
+            className="w-full h-72 object-cover"
           />
         ) : (
-          <div className="w-full h-60 bg-gradient-to-br from-sky-100 to-teal-50 flex items-center justify-center text-6xl">
+          <div className="w-full h-72 bg-gradient-to-br from-sky-100 to-teal-50 flex items-center justify-center text-6xl">
             🏔️
           </div>
         )}
@@ -108,14 +117,7 @@ export default async function PlaceDetailPage({
             <div className="rounded-2xl overflow-hidden">
               <KakaoMap mapx={place.mapx} mapy={place.mapy} title={place.title} />
             </div>
-            <a
-              href={`https://map.kakao.com/link/map/${encodeURIComponent(place.title)},${place.mapy},${place.mapx}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-2 flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl border border-gray-200 text-sm text-gray-500"
-            >
-              <span>🗺️</span> 카카오맵에서 보기
-            </a>
+            {/* 카카오맵 링크는 상단 앱바로 이동 */}
           </div>
         )}
 
@@ -156,32 +158,18 @@ export default async function PlaceDetailPage({
           </div>
         )}
 
-        {/* 일정에 추가 버튼 */}
-        <div className="mt-8">
-          <Link
-            href={`/plan?add=${params.contentid}`}
-            className="block w-full bg-sky-500 text-white text-center py-4 rounded-2xl font-semibold text-base shadow-md shadow-sky-200"
-          >
-            일정에 추가하기
-          </Link>
-        </div>
       </div>
 
-      {/* 하단 네비게이션 */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-5 py-3 flex justify-around">
-        {[
-          { href: '/', label: '홈', emoji: '🏠' },
-          { href: '/explore', label: '탐색', emoji: '🔍' },
-          { href: '/plan', label: '일정', emoji: '📅' },
-          { href: '/journal', label: '일지', emoji: '📔' },
-          { href: '/stamp', label: '스탬프', emoji: '🗺️' },
-        ].map(({ href, label, emoji }) => (
-          <Link key={href} href={href} className="flex flex-col items-center gap-0.5">
-            <span className="text-xl">{emoji}</span>
-            <span className="text-xs text-gray-500">{label}</span>
-          </Link>
-        ))}
-      </nav>
+      {/* 하단 고정 CTA (야놀자 스타일) */}
+      <div className="fixed bottom-16 left-0 right-0 z-20 px-4 pb-3 pt-2 bg-white border-t border-gray-100">
+        <Link
+          href={`/plan?add=${params.contentid}`}
+          className="flex items-center justify-center gap-2 w-full bg-blue-600 active:bg-blue-700 text-white py-4 rounded-2xl font-bold text-base transition-colors"
+        >
+          + 일정에 추가하기
+        </Link>
+      </div>
+      <BottomNav />
     </main>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import BottomNav from '@/components/BottomNav';
 import { db } from '@/lib/supabase';
 import { GANGWON_SIGUNGU } from '@/types';
 
@@ -29,6 +30,9 @@ const SIGUNGU_EMOJI: Record<string, string> = {
   '16': '🦌', '17': '🌅', '18': '🏄',
 };
 
+// 강원도 인구감소지역 12개 시군 (행안부 지정)
+const DEPOPULATED_CODES = new Set(['5', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17']);
+
 async function loadStamps(deviceId: string): Promise<VisitedMap> {
   const { data } = await db.select('stamps', { device_id: deviceId });
   if (!data || data.length === 0) return {};
@@ -43,7 +47,7 @@ export default function StampClient() {
   const [visited, setVisited] = useState<VisitedMap>({});
   const [loaded, setLoaded] = useState(false);
   const [deviceId, setDeviceId] = useState('');
-  const [popup, setPopup] = useState<{ name: string; emoji: string } | null>(null);
+  const [popup, setPopup] = useState<{ name: string; emoji: string; isRare: boolean } | null>(null);
 
   useEffect(() => {
     const id = getDeviceId();
@@ -62,8 +66,9 @@ export default function StampClient() {
       delete updated[code];
     } else {
       updated[code] = new Date().toISOString();
-      setPopup({ name, emoji: SIGUNGU_EMOJI[code] ?? '📍' });
-      setTimeout(() => setPopup(null), 2000);
+      const isRare = DEPOPULATED_CODES.has(code);
+      setPopup({ name, emoji: SIGUNGU_EMOJI[code] ?? '📍', isRare });
+      setTimeout(() => setPopup(null), isRare ? 3000 : 2000);
     }
 
     setVisited(updated);
@@ -110,10 +115,20 @@ export default function StampClient() {
           </p>
         </div>
 
+        {/* 인구감소지역 안내 */}
+        <div className="mb-4 bg-amber-50 border border-amber-100 rounded-2xl px-4 py-3 flex items-center gap-2">
+          <span className="text-xl">💎</span>
+          <div>
+            <p className="text-xs font-bold text-amber-700">희귀 스탬프 12개</p>
+            <p className="text-xs text-amber-600 opacity-80">인구감소지역 — 태백·삼척·홍천·횡성·영월·평창·정선·철원·화천·양구·인제·고성</p>
+          </div>
+        </div>
+
         {/* 스탬프 그리드 */}
         <div className="grid grid-cols-3 gap-3">
           {SIGUNGU_LIST.map((sg) => {
             const isVisited = !!visited[sg.code];
+            const isRare = DEPOPULATED_CODES.has(sg.code);
             const visitedDate = visited[sg.code]
               ? new Date(visited[sg.code]).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })
               : null;
@@ -123,23 +138,36 @@ export default function StampClient() {
                 key={sg.code}
                 onClick={() => toggleStamp(sg.code, sg.name)}
                 className={`relative flex flex-col items-center justify-center rounded-2xl p-4 aspect-square transition-all duration-200 active:scale-95 ${
-                  isVisited
+                  isVisited && isRare
+                    ? 'bg-gradient-to-br from-amber-400 to-orange-400 shadow-md shadow-amber-200 border-2 border-amber-300'
+                    : isVisited
                     ? 'bg-white shadow-md shadow-sky-100 border-2 border-sky-200'
+                    : isRare
+                    ? 'bg-gradient-to-br from-amber-50 to-orange-50 shadow-sm border-2 border-dashed border-amber-200'
                     : 'bg-white shadow-sm border-2 border-dashed border-gray-200'
                 }`}
               >
+                {/* 희귀 뱃지 */}
+                {isRare && !isVisited && (
+                  <span className="absolute top-1.5 left-1.5 text-[10px]">💎</span>
+                )}
+
                 <span className={`text-3xl mb-1 ${isVisited ? '' : 'grayscale opacity-40'}`}>
                   {SIGUNGU_EMOJI[sg.code] ?? '📍'}
                 </span>
-                <span className={`text-xs font-bold ${isVisited ? 'text-sky-600' : 'text-gray-300'}`}>
+                <span className={`text-xs font-bold ${
+                  isVisited && isRare ? 'text-white' : isVisited ? 'text-sky-600' : isRare ? 'text-amber-400' : 'text-gray-300'
+                }`}>
                   {sg.name}
                 </span>
                 {visitedDate && (
-                  <span className="text-[10px] text-gray-400 mt-0.5">{visitedDate}</span>
+                  <span className={`text-[10px] mt-0.5 ${isRare ? 'text-white/80' : 'text-gray-400'}`}>
+                    {visitedDate}
+                  </span>
                 )}
                 {isVisited && (
-                  <div className="absolute top-2 right-2 w-4 h-4 bg-sky-500 rounded-full flex items-center justify-center">
-                    <span className="text-white text-[8px] font-bold">✓</span>
+                  <div className={`absolute top-2 right-2 w-4 h-4 rounded-full flex items-center justify-center ${isRare ? 'bg-white' : 'bg-sky-500'}`}>
+                    <span className={`text-[8px] font-bold ${isRare ? 'text-amber-500' : 'text-white'}`}>✓</span>
                   </div>
                 )}
               </button>
@@ -155,35 +183,28 @@ export default function StampClient() {
       {/* 스탬프 획득 팝업 */}
       {popup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
-          <div className="bg-white rounded-3xl px-8 py-6 shadow-2xl flex flex-col items-center gap-2 animate-bounce-in">
+          <div className={`rounded-3xl px-8 py-6 shadow-2xl flex flex-col items-center gap-2 animate-bounce-in ${
+            popup.isRare
+              ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white'
+              : 'bg-white'
+          }`}>
+            {popup.isRare && <span className="text-2xl">💎</span>}
             <span className="text-5xl">{popup.emoji}</span>
-            <p className="text-base font-bold text-gray-900">{popup.name} 스탬프 획득!</p>
-            <p className="text-xs text-sky-500">강원도 여행 기록이 쌓이고 있어요</p>
+            <p className={`text-base font-bold ${popup.isRare ? 'text-white' : 'text-gray-900'}`}>
+              {popup.name} 스탬프 획득!
+            </p>
+            {popup.isRare ? (
+              <>
+                <span className="bg-white/20 rounded-full px-3 py-1 text-xs font-bold text-white">희귀 스탬프</span>
+                <p className="text-xs text-white/80">인구감소지역 방문을 응원해요 🌿</p>
+              </>
+            ) : (
+              <p className="text-xs text-sky-500">강원도 여행 기록이 쌓이고 있어요</p>
+            )}
           </div>
         </div>
       )}
-
-      {/* 하단 네비게이션 */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-5 py-3 flex justify-around">
-        {[
-          { href: '/', label: '홈', emoji: '🏠' },
-          { href: '/explore', label: '탐색', emoji: '🔍' },
-          { href: '/plan', label: '일정', emoji: '📅' },
-          { href: '/journal', label: '일지', emoji: '📔' },
-          { href: '/stamp', label: '스탬프', emoji: '🗺️' },
-        ].map(({ href, label, emoji }) => (
-          <Link
-            key={href}
-            href={href}
-            className={`flex flex-col items-center gap-0.5 ${href === '/stamp' ? 'text-sky-500' : ''}`}
-          >
-            <span className="text-xl">{emoji}</span>
-            <span className={`text-xs ${href === '/stamp' ? 'text-sky-500 font-semibold' : 'text-gray-500'}`}>
-              {label}
-            </span>
-          </Link>
-        ))}
-      </nav>
+      <BottomNav />
     </main>
   );
 }

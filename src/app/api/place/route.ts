@@ -14,5 +14,7 @@ export async function GET(req: NextRequest) {
     title: place.title,
     address: place.addr1,
     image: place.firstimage ?? null,
+    mapx: place.mapx ?? null,
+    mapy: place.mapy ?? null,
   });
 }
