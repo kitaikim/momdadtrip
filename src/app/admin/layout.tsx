@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: '/admin/trips', label: '여행 목록', icon: '🗺️' },
   { href: '/admin/users', label: '사용자', icon: '👥' },
   { href: '/admin/stamps', label: '스탬프·미션', icon: '🏅' },
+  { href: '/admin/virtual', label: '가상유저', icon: '🤖' },
 ];
 
 function LoginScreen({ onLogin }: { onLogin: () => void }) {
