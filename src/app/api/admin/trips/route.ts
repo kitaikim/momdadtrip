@@ -11,13 +11,18 @@ const HEADERS = {
   'Content-Type': 'application/json',
 };
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const excludeParam = req.nextUrl.searchParams.get('exclude') ?? '';
+  const excluded = new Set(excludeParam ? excludeParam.split(',') : []);
+
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/trips?select=*&order=updated_at.desc`,
     { headers: HEADERS }
   );
   if (!res.ok) return NextResponse.json({ error: await res.text() }, { status: 500 });
-  return NextResponse.json(await res.json());
+  const data = await res.json();
+  const filtered = excluded.size ? data.filter((r: { device_id: string }) => !excluded.has(r.device_id)) : data;
+  return NextResponse.json(filtered);
 }
 
 export async function DELETE(req: NextRequest) {

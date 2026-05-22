@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +16,10 @@ async function fetchAll(table: string, select = '*') {
   return res.json();
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const excludeParam = req.nextUrl.searchParams.get('exclude') ?? '';
+  const excluded = new Set(excludeParam ? excludeParam.split(',') : []);
+
   const [trips, journals, stamps, missions] = await Promise.all([
     fetchAll('trips', 'device_id,title,created_at,updated_at'),
     fetchAll('journal_entries', 'device_id,created_at'),
@@ -37,12 +40,14 @@ export async function GET() {
   const deviceMap: DeviceMap = {};
 
   const ensure = (id: string) => {
+    if (excluded.has(id)) return;
     if (!deviceMap[id]) {
       deviceMap[id] = { deviceId: id, firstSeen: '', lastSeen: '', trips: 0, journals: 0, stamps: 0, missions: 0 };
     }
   };
 
   for (const r of trips) {
+    if (excluded.has(r.device_id)) continue;
     ensure(r.device_id);
     deviceMap[r.device_id].trips++;
     const t = r.updated_at ?? r.created_at ?? '';
@@ -51,11 +56,13 @@ export async function GET() {
   }
 
   for (const r of journals) {
+    if (excluded.has(r.device_id)) continue;
     ensure(r.device_id);
     deviceMap[r.device_id].journals++;
   }
 
   for (const r of stamps) {
+    if (excluded.has(r.device_id)) continue;
     ensure(r.device_id);
     deviceMap[r.device_id].stamps = Object.keys(r.visited ?? {}).length;
     const t = r.updated_at ?? '';
@@ -63,6 +70,7 @@ export async function GET() {
   }
 
   for (const r of missions) {
+    if (excluded.has(r.device_id)) continue;
     ensure(r.device_id);
     deviceMap[r.device_id].missions = Object.keys(r.completed ?? {}).length;
   }

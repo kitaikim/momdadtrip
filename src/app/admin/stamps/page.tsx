@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { getExcluded } from '../excluded';
 
 interface SigunguStat {
   code: string;
@@ -47,7 +48,9 @@ export default function AdminStamps() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/admin/stamps')
+    const excluded = getExcluded();
+    const params = excluded.length ? `?exclude=${excluded.join(',')}` : '';
+    fetch(`/api/admin/stamps${params}`)
       .then((r) => r.json())
       .then(setData)
       .finally(() => setLoading(false));

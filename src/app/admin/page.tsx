@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { getExcluded } from './excluded';
 
 interface Stats {
   devices: number;
@@ -21,9 +22,13 @@ const STAT_CARDS = [
 export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [excludedCount, setExcludedCount] = useState(0);
 
   useEffect(() => {
-    fetch('/api/admin/stats')
+    const excluded = getExcluded();
+    setExcludedCount(excluded.length);
+    const params = excluded.length ? `?exclude=${excluded.join(',')}` : '';
+    fetch(`/api/admin/stats${params}`)
       .then((r) => r.json())
       .then(setStats)
       .finally(() => setLoading(false));
@@ -31,7 +36,14 @@ export default function AdminDashboard() {
 
   return (
     <div>
-      <h2 className="text-xl font-bold text-gray-900 mb-1">대시보드</h2>
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="text-xl font-bold text-gray-900">대시보드</h2>
+        {excludedCount > 0 && (
+          <span className="text-xs bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full">
+            {excludedCount}개 기기 제외됨
+          </span>
+        )}
+      </div>
       <p className="text-sm text-gray-400 mb-6">서비스 전체 현황</p>
 
       {loading ? (
@@ -54,7 +66,7 @@ export default function AdminDashboard() {
         <h3 className="text-sm font-bold text-gray-700 mb-3">안내</h3>
         <ul className="text-sm text-gray-500 flex flex-col gap-2">
           <li>• 사용자는 로그인 없이 기기 ID로 구분돼요 — 같은 사람이 기기를 바꾸면 다른 사용자로 집계돼요.</li>
-          <li>• 스탬프·미션은 강원도 18개 시군 방문 기록과 20개 미션 완료 현황이에요.</li>
+          <li>• 제외된 기기는 모든 통계에서 빠져요. 사용자 탭에서 관리할 수 있어요.</li>
           <li>• Supabase에 <code className="bg-gray-100 px-1 rounded">SUPABASE_SERVICE_KEY</code>를 설정하면 더 정확한 데이터를 볼 수 있어요.</li>
         </ul>
       </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { getExcluded } from '../excluded';
 
 interface TripPlace {
   contentId: string;
@@ -37,7 +38,9 @@ export default function AdminTrips() {
 
   const load = () => {
     setLoading(true);
-    fetch('/api/admin/trips')
+    const excluded = getExcluded();
+    const params = excluded.length ? `?exclude=${excluded.join(',')}` : '';
+    fetch(`/api/admin/trips${params}`)
       .then((r) => r.json())
       .then(setTrips)
       .finally(() => setLoading(false));

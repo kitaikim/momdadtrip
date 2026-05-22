@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { GANGWON_SIGUNGU } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -11,14 +11,19 @@ const HEADERS = {
   Authorization: `Bearer ${SUPABASE_KEY}`,
 };
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const excludeParam = req.nextUrl.searchParams.get('exclude') ?? '';
+  const excluded = new Set(excludeParam ? excludeParam.split(',') : []);
+
   const [stampsRes, missionsRes] = await Promise.all([
     fetch(`${SUPABASE_URL}/rest/v1/stamps?select=*`, { headers: HEADERS }),
     fetch(`${SUPABASE_URL}/rest/v1/missions?select=*`, { headers: HEADERS }),
   ]);
 
-  const stamps = stampsRes.ok ? await stampsRes.json() : [];
-  const missions = missionsRes.ok ? await missionsRes.json() : [];
+  const allStamps = stampsRes.ok ? await stampsRes.json() : [];
+  const allMissions = missionsRes.ok ? await missionsRes.json() : [];
+  const stamps = excluded.size ? allStamps.filter((r: { device_id: string }) => !excluded.has(r.device_id)) : allStamps;
+  const missions = excluded.size ? allMissions.filter((r: { device_id: string }) => !excluded.has(r.device_id)) : allMissions;
 
   // 지역별 스탬프 집계
   const sigunguCount: Record<string, number> = {};
