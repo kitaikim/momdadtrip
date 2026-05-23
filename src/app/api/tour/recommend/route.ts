@@ -33,13 +33,13 @@ export async function POST(req: NextRequest) {
 
     // 무장애 API 필터 (유모차·주차·화장실 중 하나라도 선택된 경우)
     if (strollerRequired || parkingRequired || restroomRequired) {
-      const { items } = await getBarrierFreeList({ sigunguCode, numOfRows: 120 });
+      const { items } = await getBarrierFreeList({ sigunguCode, numOfRows: 200 });
       const places = items.filter(item => {
         if (strollerRequired && !isFacilityOk(item.stroller)) return false;
         if (parkingRequired && !isFacilityOk(item.parking)) return false;
         if (restroomRequired && !isFacilityOk(item.restroom)) return false;
         return true;
-      }).slice(0, 40);
+      });
       return NextResponse.json({ places, total: places.length });
     }
 
@@ -53,15 +53,14 @@ export async function POST(req: NextRequest) {
         getAreaBasedList({
           contentTypeId: ct,
           sigunguCode,
-          numOfRows: 30,
+          numOfRows: 100,
         })
       )
     );
 
     const places = results
       .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
-      .flatMap(r => r.value.items ?? [])
-      .slice(0, 40);
+      .flatMap(r => r.value.items ?? []);
 
     return NextResponse.json({ places, total: places.length });
   } catch (err) {

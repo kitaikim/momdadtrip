@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const items = await searchKeyword(keyword);
-    return NextResponse.json({ places: items.slice(0, 50) });
+    return NextResponse.json({ places: items });
   } catch {
     return NextResponse.json({ error: '검색에 실패했어요.' }, { status: 500 });
   }
