@@ -4,11 +4,11 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 const QUICK_TAGS = [
-  { label: '🌊 바다', q: '바다' },
-  { label: '⛰️ 산', q: '산' },
-  { label: '🎡 놀이공원', q: '놀이공원' },
-  { label: '🛒 유모차', q: '유모차' },
-  { label: '🌿 캠핑', q: '캠핑' },
+  { label: '🌊 바다·해변', href: '/explore?q=해수욕장' },
+  { label: '⛰️ 산·자연', href: '/explore?q=산' },
+  { label: '🎡 체험·놀이', href: '/explore?q=체험' },
+  { label: '🛒 유모차 OK', href: '/explore?stroller=1' },
+  { label: '🌿 캠핑', href: '/explore?q=캠핑' },
 ];
 
 export default function HomeSearch() {
@@ -40,8 +40,8 @@ export default function HomeSearch() {
       <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
         {QUICK_TAGS.map(t => (
           <button
-            key={t.q}
-            onClick={() => router.push(`/explore?q=${encodeURIComponent(t.q)}`)}
+            key={t.href}
+            onClick={() => router.push(t.href)}
             className="flex-shrink-0 text-xs font-medium bg-white border border-gray-200 text-gray-600 rounded-full px-3 py-1.5 active:bg-gray-50"
           >
             {t.label}
