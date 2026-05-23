@@ -3,6 +3,7 @@ import TripStatusBar from './TripStatusBar';
 import HomeHero from './HomeHero';
 import HomeSearch from './HomeSearch';
 import HomeCourses from './HomeCourses';
+import HomeFeed from './HomeFeed';
 import BottomNav from '@/components/BottomNav';
 
 export default function Home() {
@@ -16,6 +17,8 @@ export default function Home() {
         <TripStatusBar />
 
         <HomeCourses />
+
+        <HomeFeed />
 
         {/* 추천 코스 */}
         <section className="px-4 mb-5">
