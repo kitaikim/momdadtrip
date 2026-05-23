@@ -10,7 +10,11 @@ const client = createClient(
 
 export const auth = {
   signUp: (email: string, password: string) =>
-    client.auth.signUp({ email, password }),
+    client.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: 'https://momdadtrip.vercel.app/account' },
+    }),
 
   signIn: (email: string, password: string) =>
     client.auth.signInWithPassword({ email, password }),

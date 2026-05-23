@@ -186,19 +186,29 @@ export default function PlanClient() {
     fetch(`/api/place?contentid=${addContentId}`)
       .then(r => r.json())
       .then((data) => {
-        if (data.contentId) {
-          setAddingPlace({
-            contentId: data.contentId,
-            title: data.title,
-            address: data.address,
-            image: data.image ?? undefined,
-            category: contentTypeToCategory(data.contentTypeId),
-            mapx: data.mapx ?? undefined,
-            mapy: data.mapy ?? undefined,
-          });
+        if (!data.contentId) return;
+        const place: TripPlace = {
+          contentId: data.contentId,
+          title: data.title,
+          address: data.address,
+          image: data.image ?? undefined,
+          category: contentTypeToCategory(data.contentTypeId),
+          mapx: data.mapx ?? undefined,
+          mapy: data.mapy ?? undefined,
+        };
+        // Day 탭에서 "장소 추가" 눌렀을 때 자동으로 해당 날에 추가
+        const targetDay = localStorage.getItem('plan_target_day');
+        if (targetDay && trip) {
+          const dayExists = trip.days.some(d => d.date === targetDay);
+          if (dayExists) {
+            localStorage.removeItem('plan_target_day');
+            addPlaceToDay(place, targetDay);
+            return;
+          }
         }
+        setAddingPlace(place);
       });
-  }, [addContentId, loaded]);
+  }, [addContentId, loaded, trip]);
 
   const persistTrip = useCallback(async (updated: Trip) => {
     setTrip(updated);
@@ -292,6 +302,32 @@ export default function PlanClient() {
         const places = [...d.places];
         const [moved] = places.splice(fromIdx, 1);
         places.splice(toIdx, 0, moved);
+        return { ...d, places };
+      }),
+    };
+    await persistTrip(updated);
+  }, [trip, persistTrip]);
+
+  const movePlaceBetweenDays = useCallback(async (fromDate: string, fromIdx: number, toDate: string, toIdx: number) => {
+    if (!trip) return;
+    let moved: TripPlace | null = null;
+    const stage1 = {
+      ...trip,
+      days: trip.days.map(d => {
+        if (d.date !== fromDate) return d;
+        const places = [...d.places];
+        [moved] = places.splice(fromIdx, 1);
+        return { ...d, places };
+      }),
+    };
+    if (!moved) return;
+    const movedPlace = moved;
+    const updated: Trip = {
+      ...stage1,
+      days: stage1.days.map(d => {
+        if (d.date !== toDate) return d;
+        const places = [...d.places];
+        places.splice(toIdx, 0, movedPlace);
         return { ...d, places };
       }),
     };
@@ -467,7 +503,16 @@ export default function PlanClient() {
                   <span className="text-xs text-gray-500">{formatDate(day.date)}</span>
                 </div>
 
-                <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div
+                  className="bg-white rounded-2xl shadow-sm overflow-hidden"
+                  onDragOver={e => e.preventDefault()}
+                  onDrop={() => {
+                    if (dragging && dragging.date !== day.date) {
+                      movePlaceBetweenDays(dragging.date, dragging.idx, day.date, day.places.length);
+                    }
+                    setDragging(null); setDragOver(null);
+                  }}
+                >
                   {day.places.length === 0 && (
                     <div className="px-4 py-5 text-center">
                       <p className="text-sm text-gray-300">장소를 추가해보세요</p>
@@ -487,7 +532,13 @@ export default function PlanClient() {
                           onDragStart={() => setDragging({ date: day.date, idx: placeIdx })}
                           onDragOver={e => { e.preventDefault(); setDragOver({ date: day.date, idx: placeIdx }); }}
                           onDrop={() => {
-                            if (dragging?.date === day.date) reorderPlace(day.date, dragging.idx, placeIdx);
+                            if (dragging) {
+                              if (dragging.date === day.date) {
+                                reorderPlace(day.date, dragging.idx, placeIdx);
+                              } else {
+                                movePlaceBetweenDays(dragging.date, dragging.idx, day.date, placeIdx);
+                              }
+                            }
                             setDragging(null); setDragOver(null);
                           }}
                           onDragEnd={() => { setDragging(null); setDragOver(null); }}
@@ -515,6 +566,7 @@ export default function PlanClient() {
                   <div className="border-t border-gray-50">
                     <Link
                       href="/explore"
+                      onClick={() => localStorage.setItem('plan_target_day', day.date)}
                       className="flex items-center justify-center gap-1 px-4 py-3 text-sm text-sky-500 font-medium"
                     >
                       + 장소 추가

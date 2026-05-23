@@ -8,7 +8,6 @@ const NAV_ITEMS = [
   { href: '/explore', label: '탐색', emoji: '🔍' },
   { href: '/plan', label: '일정', emoji: '📅' },
   { href: '/journal', label: '일지', emoji: '📔' },
-  { href: '/stamp', label: '스탬프', emoji: '🗺️' },
 ];
 
 export default function BottomNav() {
