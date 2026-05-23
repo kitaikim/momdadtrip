@@ -2,132 +2,14 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import BottomNav from '@/components/BottomNav';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import type { AgeGroup } from '@/types';
+import { COURSES, type Course } from '@/data/courses';
 
 type DurationFilter = 'all' | '0' | '1' | '2';
-
-interface CoursePlace {
-  name: string;
-  type: string;
-  address: string;
-}
-
-interface Course {
-  id: string;
-  title: string;
-  emoji: string;
-  description: string;
-  region: string;
-  days: number; // 0=당일, 1=1박2일, 2=2박3일
-  ageGroups: AgeGroup[];
-  gradient: string;
-  places: CoursePlace[];
-}
-
-const COURSES: Course[] = [
-  {
-    id: 'chuncheon-daytrip',
-    title: '춘천 가족 나들이',
-    emoji: '🦆',
-    description: '레고랜드에서 신나는 하루, 의암호 수변 산책까지',
-    region: '춘천',
-    days: 0,
-    ageGroups: ['toddler', 'child'],
-    gradient: 'from-sky-400 to-blue-500',
-    places: [
-      { name: '레고랜드 코리아', type: '🎡 체험', address: '춘천시 하중도길 128' },
-      { name: '의암호 스카이워크', type: '🌊 명소', address: '춘천시 서면 박사로 866' },
-      { name: '춘천 닭갈비 거리', type: '🍗 맛집', address: '춘천시 명동길' },
-      { name: '춘천 애니메이션박물관', type: '🎨 문화', address: '춘천시 서면 박사로 854' },
-    ],
-  },
-  {
-    id: 'gangneung-beach',
-    title: '강릉 바다 당일치기',
-    emoji: '🌊',
-    description: '경포해변 모래놀이에 오죽헌 역사 탐방',
-    region: '강릉',
-    days: 0,
-    ageGroups: ['child', 'tween'],
-    gradient: 'from-cyan-400 to-teal-500',
-    places: [
-      { name: '경포해변', type: '🏖️ 해변', address: '강릉시 경포로 365' },
-      { name: '오죽헌', type: '🏯 역사', address: '강릉시 율곡로 3139번길 24' },
-      { name: '주문진항', type: '🐟 맛집', address: '강릉시 주문진읍 주문북로 10' },
-      { name: '강릉 과학체험관', type: '🔬 체험', address: '강릉시 남산초교길 12' },
-    ],
-  },
-  {
-    id: 'sokcho-1night',
-    title: '속초·고성 1박2일',
-    emoji: '🏔️',
-    description: '아쿠아리움, 설악산 케이블카, 고성 DMZ 체험',
-    region: '속초·고성',
-    days: 1,
-    ageGroups: ['child', 'tween'],
-    gradient: 'from-slate-500 to-blue-600',
-    places: [
-      { name: '속초 씨사이드 아쿠아리움', type: '🐠 체험', address: '속초시 해오름로 7' },
-      { name: '설악산 케이블카', type: '🚡 명소', address: '속초시 설악산로 1091' },
-      { name: '고성 DMZ 박물관', type: '🏛️ 역사', address: '고성군 현내면 금강산로 481' },
-      { name: '아야진 해변', type: '🏖️ 해변', address: '고성군 토성면 아야진리' },
-    ],
-  },
-  {
-    id: 'pyeongchang-1night',
-    title: '평창 자연 1박2일',
-    emoji: '🐑',
-    description: '대관령 양떼목장 체험, 하늘마루 전망, 알펜시아 숙박',
-    region: '평창',
-    days: 1,
-    ageGroups: ['toddler', 'child'],
-    gradient: 'from-green-400 to-emerald-500',
-    places: [
-      { name: '대관령 양떼목장', type: '🐑 체험', address: '평창군 대관령면 대관령마루길 483-32' },
-      { name: '대관령 하늘마루', type: '🌿 명소', address: '평창군 대관령면 올림픽로 374' },
-      { name: '알펜시아 리조트', type: '🏨 숙박', address: '평창군 대관령면 솔봉로 325' },
-      { name: '허브나라 농원', type: '🌺 체험', address: '평창군 봉평면 창동리 576' },
-    ],
-  },
-  {
-    id: 'grand-2nights',
-    title: '강원도 그랜드투어 2박3일',
-    emoji: '🎯',
-    description: '춘천-강릉-속초, 강원도 핵심 명소 완전 정복',
-    region: '춘천·강릉·속초',
-    days: 2,
-    ageGroups: ['child', 'tween'],
-    gradient: 'from-orange-400 to-rose-500',
-    places: [
-      { name: '레고랜드 코리아', type: '🎡 체험', address: '춘천시 하중도길 128' },
-      { name: '경포해변', type: '🏖️ 해변', address: '강릉시 경포로 365' },
-      { name: '정동진', type: '🌅 명소', address: '강릉시 강동면 정동역길' },
-      { name: '속초 씨사이드 아쿠아리움', type: '🐠 체험', address: '속초시 해오름로 7' },
-      { name: '설악산 케이블카', type: '🚡 명소', address: '속초시 설악산로 1091' },
-    ],
-  },
-  {
-    id: 'healing-2nights',
-    title: '힐링 가족 여행 2박3일',
-    emoji: '🌿',
-    description: '유모차도 OK! 원주·횡성·평창에서 느리게 걷는 여행',
-    region: '원주·횡성·평창',
-    days: 2,
-    ageGroups: ['infant', 'toddler'],
-    gradient: 'from-emerald-400 to-teal-500',
-    places: [
-      { name: '뮤지엄 산 (뮤지엄SAN)', type: '🎨 문화', address: '원주시 지정면 오크밸리2길 260' },
-      { name: '횡성 웰리힐리파크', type: '🎿 체험', address: '횡성군 둔내면 고래산로 215' },
-      { name: '평창 월정사', type: '⛩️ 명소', address: '평창군 진부면 오대산로 374-8' },
-      { name: '무이예술관', type: '🎨 문화', address: '평창군 봉평면 기풍리 203' },
-    ],
-  },
-];
 
 const AGE_LABEL: Record<AgeGroup, string> = {
   infant: '영아', toddler: '유아', child: '어린이', tween: '초등',

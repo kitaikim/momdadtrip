@@ -52,7 +52,7 @@ export default function TripViewer() {
 
   let trip: SharedTrip | null = null;
   try {
-    if (encoded) trip = JSON.parse(decodeURIComponent(atob(encoded)));
+    if (encoded) trip = JSON.parse(decodeURIComponent(atob(decodeURIComponent(encoded))));
   } catch {}
 
   if (!trip) {

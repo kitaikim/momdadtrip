@@ -42,10 +42,11 @@ function ExploreContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const [tab, setTab] = useState<'filter' | 'search' | 'course'>('filter');
+  const [tab, setTab] = useState<'filter' | 'search'>('filter');
   const [keyword, setKeyword] = useState('');
-  const [courses, setCourses] = useState<PlaceItem[]>([]);
-  const [coursesLoaded, setCoursesLoaded] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sigunguFilter, setSigunguFilter] = useState('');
+  const ITEMS_PER_PAGE = 12;
 
   const [selectedThemes, setSelectedThemes] = useState<TravelTheme[]>(
     searchParams.get('theme') ? [searchParams.get('theme') as TravelTheme] : []
@@ -72,6 +73,8 @@ function ExploreContent() {
     setKeyword(q);
     setLoading(true);
     setSearched(true);
+    setCurrentPage(1);
+    setSigunguFilter('');
     fetch(`/api/tour/search?q=${encodeURIComponent(q)}`)
       .then(r => r.json())
       .then(d => setPlaces(d.places ?? []))
@@ -88,19 +91,22 @@ function ExploreContent() {
       .catch(() => {});
   }, [selectedSigungu]);
 
-  useEffect(() => {
-    if (tab !== 'course' || coursesLoaded) return;
-    const sigungu = selectedSigungu || '';
-    fetch(`/api/tour/courses?sigungu=${sigungu}`)
-      .then(r => r.json())
-      .then(d => { setCourses(d.courses ?? []); setCoursesLoaded(true); })
-      .catch(() => setCoursesLoaded(true));
-  }, [tab, coursesLoaded, selectedSigungu]);
+  function extractSigungu(addr: string): string {
+    const m = addr.match(/강원[\w가-힣]*\s+([\w가-힣]+[시군])/);
+    return m ? m[1] : '';
+  }
+
+  const sigungus = Array.from(new Set(places.map(p => extractSigungu(p.addr1)).filter(Boolean)));
+  const filteredByGu = sigunguFilter ? places.filter(p => extractSigungu(p.addr1) === sigunguFilter) : places;
+  const totalPages = Math.ceil(filteredByGu.length / ITEMS_PER_PAGE);
+  const pagedPlaces = filteredByGu.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   const handleKeywordSearch = async () => {
     if (!keyword.trim()) return;
     setLoading(true);
     setSearched(true);
+    setCurrentPage(1);
+    setSigunguFilter('');
     try {
       const res = await fetch(`/api/tour/search?q=${encodeURIComponent(keyword)}`);
       const data = await res.json();
@@ -121,6 +127,8 @@ function ExploreContent() {
   const handleSearch = async () => {
     setLoading(true);
     setSearched(true);
+    setCurrentPage(1);
+    setSigunguFilter('');
     try {
       const body: TravelSearchParams = {
         ageGroup: selectedAge,
@@ -162,7 +170,6 @@ function ExploreContent() {
           {([
             { id: 'filter', label: '조건 검색' },
             { id: 'search', label: '직접 검색' },
-            { id: 'course', label: '추천 코스' },
           ] as const).map(t => (
             <button
               key={t.id}
@@ -176,6 +183,12 @@ function ExploreContent() {
               {t.label}
             </button>
           ))}
+          <button
+            onClick={() => router.push('/course')}
+            className="flex-1 py-3 text-sm font-semibold text-gray-400 transition-colors"
+          >
+            추천 코스
+          </button>
         </div>
       </header>
 
@@ -210,36 +223,6 @@ function ExploreContent() {
             ))}
           </div>
         </div>
-      )}
-
-      {/* 추천 코스 탭 */}
-      {tab === 'course' && (
-        <section className="px-5 py-4">
-          {!coursesLoaded && <p className="text-center text-gray-400 text-sm mt-8">코스 불러오는 중...</p>}
-          {coursesLoaded && courses.length === 0 && (
-            <p className="text-center text-gray-400 text-sm mt-8">코스 정보가 없어요 😅</p>
-          )}
-          <div className="flex flex-col gap-4">
-            {courses.map(c => (
-              <Link
-                key={c.contentid}
-                href={`/explore/${c.contentid}`}
-                className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 flex gap-3 p-3 active:scale-95 transition-transform"
-              >
-                {c.firstimage ? (
-                  <img src={c.firstimage} alt={c.title} className="w-24 h-20 rounded-xl object-cover flex-shrink-0" />
-                ) : (
-                  <div className="w-24 h-20 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center text-3xl flex-shrink-0">🗺️</div>
-                )}
-                <div className="flex-1 min-w-0 py-1">
-                  <p className="font-semibold text-gray-800 text-sm leading-snug line-clamp-2">{c.title}</p>
-                  <p className="text-xs text-gray-400 mt-1 line-clamp-2">{c.addr1}</p>
-                  <span className="inline-block mt-2 text-[10px] bg-blue-50 text-blue-600 rounded-full px-2 py-0.5 font-medium">여행코스</span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
       )}
 
       {/* 날씨 카드 (조건 검색 탭에만) */}
@@ -353,9 +336,8 @@ function ExploreContent() {
         </Button>
       </section>}
 
-      {/* 결과 (필터·검색 탭) */}
-      {tab !== 'course' && <section className="px-5 py-4">
-        {/* 스켈레톤 로딩 */}
+      {/* 결과 섹션 */}
+      <section className="px-5 py-4">
         {loading && (
           <div className="grid grid-cols-2 gap-3">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -364,7 +346,6 @@ function ExploreContent() {
                 <div className="p-3 space-y-2">
                   <Skeleton className="h-4 w-full" />
                   <Skeleton className="h-3 w-2/3" />
-                  <Skeleton className="h-4 w-1/2" />
                 </div>
               </div>
             ))}
@@ -387,45 +368,115 @@ function ExploreContent() {
           </div>
         )}
 
-        {!loading && (
-          <div className="grid grid-cols-2 gap-3">
-            {places.map(place => (
-              <Link
-                key={place.contentid}
-                href={`/explore/${place.contentid}`}
-                className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 active:scale-95 transition-transform"
-              >
-                {place.firstimage ? (
-                  <img
-                    src={place.firstimage}
-                    alt={place.title}
-                    className="w-full h-32 object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-32 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center text-3xl">🏔️</div>
-                )}
-                <div className="p-3">
-                  <p className="font-semibold text-gray-800 text-sm leading-tight line-clamp-2">{place.title}</p>
-                  <p className="text-xs text-gray-400 mt-1 line-clamp-1">{place.addr1}</p>
-                  {(place.parking || place.restroom || place.stroller) && (
-                    <div className="flex gap-1 mt-1.5 flex-wrap">
-                      {place.parking && place.parking !== '0' && place.parking !== 'N' && (
-                        <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-blue-50 text-blue-600 border-blue-100">🅿️ 주차</Badge>
-                      )}
-                      {place.restroom && place.restroom !== '0' && place.restroom !== 'N' && (
-                        <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-green-50 text-green-600 border-green-100">🚻 화장실</Badge>
-                      )}
-                      {place.stroller && place.stroller !== '0' && place.stroller !== 'N' && (
-                        <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-blue-50 text-blue-600 border-blue-100">🛒 유모차</Badge>
-                      )}
-                    </div>
-                  )}
+        {!loading && searched && places.length > 0 && (
+          <>
+            {/* 결과 수 + 지역 필터 */}
+            <div className="mb-3">
+              <p className="text-xs text-gray-400 mb-2">
+                총 <span className="font-semibold text-gray-700">{filteredByGu.length}</span>개
+                {sigunguFilter && ` · ${sigunguFilter}`}
+              </p>
+              {sigungus.length > 1 && (
+                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                  <button
+                    onClick={() => { setSigunguFilter(''); setCurrentPage(1); }}
+                    className={`flex-shrink-0 text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ${
+                      !sigunguFilter ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200'
+                    }`}
+                  >
+                    전체
+                  </button>
+                  {sigungus.map(sg => (
+                    <button
+                      key={sg}
+                      onClick={() => { setSigunguFilter(sg); setCurrentPage(1); }}
+                      className={`flex-shrink-0 text-xs font-medium px-3 py-1.5 rounded-full border transition-colors ${
+                        sigunguFilter === sg ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200'
+                      }`}
+                    >
+                      {sg}
+                    </button>
+                  ))}
                 </div>
-              </Link>
-            ))}
-          </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              {pagedPlaces.map(place => (
+                <Link
+                  key={place.contentid}
+                  href={`/explore/${place.contentid}`}
+                  className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 active:scale-95 transition-transform"
+                >
+                  {place.firstimage ? (
+                    <img src={place.firstimage} alt={place.title} className="w-full h-32 object-cover" />
+                  ) : (
+                    <div className="w-full h-32 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center text-3xl">🏔️</div>
+                  )}
+                  <div className="p-3">
+                    <p className="font-semibold text-gray-800 text-sm leading-tight line-clamp-2">{place.title}</p>
+                    <p className="text-xs text-gray-400 mt-1 line-clamp-1">{place.addr1}</p>
+                    {(place.parking || place.restroom || place.stroller) && (
+                      <div className="flex gap-1 mt-1.5 flex-wrap">
+                        {place.parking && place.parking !== '0' && place.parking !== 'N' && (
+                          <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-blue-50 text-blue-600 border-blue-100">🅿️ 주차</Badge>
+                        )}
+                        {place.restroom && place.restroom !== '0' && place.restroom !== 'N' && (
+                          <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-green-50 text-green-600 border-green-100">🚻 화장실</Badge>
+                        )}
+                        {place.stroller && place.stroller !== '0' && place.stroller !== 'N' && (
+                          <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-blue-50 text-blue-600 border-blue-100">🛒 유모차</Badge>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            {/* 페이지네이션 */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-6">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="w-9 h-9 flex items-center justify-center rounded-full border border-gray-200 text-gray-500 disabled:opacity-30 active:bg-gray-50"
+                >
+                  ←
+                </button>
+                <div className="flex gap-1">
+                  {Array.from({ length: Math.min(totalPages, 7) }).map((_, i) => {
+                    let page = i + 1;
+                    if (totalPages > 7) {
+                      if (currentPage <= 4) page = i + 1;
+                      else if (currentPage >= totalPages - 3) page = totalPages - 6 + i;
+                      else page = currentPage - 3 + i;
+                    }
+                    return (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`w-9 h-9 rounded-full text-xs font-semibold transition-colors ${
+                          currentPage === page ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    );
+                  })}
+                </div>
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="w-9 h-9 flex items-center justify-center rounded-full border border-gray-200 text-gray-500 disabled:opacity-30 active:bg-gray-50"
+                >
+                  →
+                </button>
+              </div>
+            )}
+          </>
         )}
-      </section>}
+      </section>
       <BottomNav />
     </main>
   );

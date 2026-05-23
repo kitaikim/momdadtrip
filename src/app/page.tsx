@@ -2,6 +2,7 @@ import Link from 'next/link';
 import TripStatusBar from './TripStatusBar';
 import HomeHero from './HomeHero';
 import HomeSearch from './HomeSearch';
+import HomeCourses from './HomeCourses';
 import BottomNav from '@/components/BottomNav';
 
 export default function Home() {
@@ -13,6 +14,8 @@ export default function Home() {
         <HomeSearch />
 
         <TripStatusBar />
+
+        <HomeCourses />
 
         {/* 추천 코스 */}
         <section className="px-4 mb-5">

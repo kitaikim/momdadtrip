@@ -415,7 +415,7 @@ export default function PlanClient() {
     if (!trip) return;
     const payload = { title: trip.title, start: trip.startDate, end: trip.endDate, days: trip.days };
     const encoded = btoa(encodeURIComponent(JSON.stringify(payload)));
-    const url = `${window.location.origin}/trip?d=${encoded}`;
+    const url = `${window.location.origin}/trip?d=${encodeURIComponent(encoded)}`;
     navigator.clipboard.writeText(url).then(() => {
       setShareCopied(true);
       setTimeout(() => setShareCopied(false), 2500);
