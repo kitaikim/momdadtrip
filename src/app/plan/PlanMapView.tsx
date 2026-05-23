@@ -14,6 +14,7 @@ interface MapPlace {
   dayIdx: number;
   idxInDay?: number;
   category?: string;
+  contentId?: string;
 }
 
 interface Props {
@@ -21,6 +22,7 @@ interface Props {
   dayCount: number;
   departure?: string;
   onClose: () => void;
+  onMoveToDay?: (contentId: string, fromDayIdx: number, toDayIdx: number) => void;
 }
 
 const DAY_COLORS = ['#2563EB', '#16A34A', '#DC2626', '#D97706', '#7C3AED', '#0891B2'];
@@ -36,7 +38,7 @@ function makeSvgMarker(number: number, color: string): string {
 
 type Resolved = MapPlace & { lat: number; lng: number; globalIdx: number };
 
-export default function PlanMapView({ places, dayCount, departure, onClose }: Props) {
+export default function PlanMapView({ places, dayCount, departure, onClose, onMoveToDay }: Props) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const kakaoMapRef = useRef<any>(null);
   const markersRef = useRef<{ marker: any; infowindow: any }[]>([]);
@@ -312,6 +314,25 @@ export default function PlanMapView({ places, dayCount, departure, onClose }: Pr
                   </div>
                   <p className="text-sm font-semibold text-gray-900 leading-tight line-clamp-2">{place.title}</p>
                   <p className="text-xs text-gray-400 mt-0.5 truncate">{place.address}</p>
+                  {isSelected && onMoveToDay && place.contentId && dayCount > 1 && (
+                    <div className="flex gap-1 mt-2 flex-wrap">
+                      {Array.from({ length: dayCount }).map((_, i) =>
+                        i !== place.dayIdx ? (
+                          <button
+                            key={i}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onMoveToDay(place.contentId!, place.dayIdx, i);
+                            }}
+                            className="text-white text-[10px] font-bold px-2 py-0.5 rounded-full"
+                            style={{ backgroundColor: DAY_COLORS[i % DAY_COLORS.length] }}
+                          >
+                            Day {i + 1}로
+                          </button>
+                        ) : null
+                      )}
+                    </div>
+                  )}
                 </button>
               );
             })}

@@ -106,7 +106,7 @@ export async function searchKeyword(keyword: string, contentTypeId?: ContentType
     keyword,
     areaCode: '32',
     contentTypeId: contentTypeId ?? '',
-    numOfRows: 20,
+    numOfRows: 50,
     pageNo: 1,
   });
 

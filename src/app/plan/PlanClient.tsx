@@ -75,6 +75,43 @@ interface Trip {
   days: TripDay[];
 }
 
+function haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function dayDistance(places: TripPlace[]): number {
+  let total = 0;
+  for (let i = 1; i < places.length; i++) {
+    const a = places[i - 1], b = places[i];
+    if (a.mapx && a.mapy && b.mapx && b.mapy) {
+      total += haversine(parseFloat(a.mapy), parseFloat(a.mapx), parseFloat(b.mapy), parseFloat(b.mapx));
+    }
+  }
+  return total;
+}
+
+function nearestNeighborSort(places: TripPlace[]): TripPlace[] {
+  if (places.length <= 2) return places;
+  const remaining = [...places.slice(1)];
+  const result = [places[0]];
+  while (remaining.length > 0) {
+    const last = result[result.length - 1];
+    if (!last.mapx || !last.mapy) { result.push(...remaining.splice(0, 1)); continue; }
+    let nearestIdx = 0, minDist = Infinity;
+    remaining.forEach((p, i) => {
+      if (!p.mapx || !p.mapy) return;
+      const d = haversine(parseFloat(last.mapy!), parseFloat(last.mapx!), parseFloat(p.mapy!), parseFloat(p.mapx!));
+      if (d < minDist) { minDist = d; nearestIdx = i; }
+    });
+    result.push(...remaining.splice(nearestIdx, 1));
+  }
+  return result;
+}
+
 function dateRange(start: string, end: string): string[] {
   const dates: string[] = [];
   const cur = new Date(start);
@@ -334,6 +371,44 @@ export default function PlanClient() {
     await persistTrip(updated);
   }, [trip, persistTrip]);
 
+  const movePlaceToDay = useCallback(async (contentId: string, fromDayIdx: number, toDayIdx: number) => {
+    if (!trip) return;
+    let movedPlace: TripPlace | null = null;
+    const stage1: Trip = {
+      ...trip,
+      days: trip.days.map((d, i) => {
+        if (i !== fromDayIdx) return d;
+        const places = [...d.places];
+        const idx = places.findIndex(p => p.contentId === contentId);
+        if (idx === -1) return d;
+        [movedPlace] = places.splice(idx, 1);
+        return { ...d, places };
+      }),
+    };
+    if (!movedPlace) return;
+    const fp = movedPlace;
+    const updated: Trip = {
+      ...stage1,
+      days: stage1.days.map((d, i) => {
+        if (i !== toDayIdx) return d;
+        return { ...d, places: [...d.places, fp] };
+      }),
+    };
+    await persistTrip(updated);
+  }, [trip, persistTrip]);
+
+  const optimizeRoutes = useCallback(async () => {
+    if (!trip) return;
+    const updated: Trip = {
+      ...trip,
+      days: trip.days.map(d => ({
+        ...d,
+        places: nearestNeighborSort(d.places),
+      })),
+    };
+    await persistTrip(updated);
+  }, [trip, persistTrip]);
+
   const [showMap, setShowMap] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
   const shareTrip = useCallback(() => {
@@ -474,6 +549,12 @@ export default function PlanClient() {
                   );
                 })}
               </div>
+              {(() => {
+                const totalDist = trip.days.reduce((s, d) => s + dayDistance(d.places), 0);
+                return totalDist > 0 ? (
+                  <p className="text-xs opacity-70 mt-1">📍 총 이동거리 약 {totalDist.toFixed(0)}km</p>
+                ) : null;
+              })()}
               <div className="grid grid-cols-2 gap-2 mt-3">
                 <button
                   onClick={() => setShowMap(true)}
@@ -488,6 +569,12 @@ export default function PlanClient() {
                   {shareCopied ? '✓ 복사됨!' : '🔗 링크 공유'}
                 </button>
               </div>
+              <button
+                onClick={optimizeRoutes}
+                className="mt-2 w-full flex items-center justify-center gap-1.5 bg-white/20 rounded-xl py-2.5 text-sm font-bold text-white active:bg-white/30"
+              >
+                ✨ AI 경로 최적화 (거리 기준)
+              </button>
               <button onClick={deleteTrip} className="mt-1.5 text-xs text-white/40 text-right w-full py-1">
                 일정 삭제
               </button>
@@ -501,6 +588,12 @@ export default function PlanClient() {
                     Day {dayIdx + 1}
                   </span>
                   <span className="text-xs text-gray-500">{formatDate(day.date)}</span>
+                  {(() => {
+                    const dist = dayDistance(day.places);
+                    return dist > 0 ? (
+                      <span className="text-xs text-gray-400 ml-auto">{dist.toFixed(1)}km</span>
+                    ) : null;
+                  })()}
                 </div>
 
                 <div
@@ -636,11 +729,13 @@ export default function PlanClient() {
               dayIdx,
               idxInDay,
               category: p.category,
+              contentId: p.contentId,
             }))
           )}
           dayCount={trip.days.length}
           departure={trip.departure}
           onClose={() => setShowMap(false)}
+          onMoveToDay={movePlaceToDay}
         />
       )}
     </main>

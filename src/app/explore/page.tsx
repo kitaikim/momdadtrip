@@ -64,6 +64,22 @@ function ExploreContent() {
   const [searched, setSearched] = useState(false);
   const [weather, setWeather] = useState<WeatherInfo | null>(null);
 
+  // 홈 검색창에서 넘어온 q 파라미터 자동 검색
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (!q) return;
+    setTab('search');
+    setKeyword(q);
+    setLoading(true);
+    setSearched(true);
+    fetch(`/api/tour/search?q=${encodeURIComponent(q)}`)
+      .then(r => r.json())
+      .then(d => setPlaces(d.places ?? []))
+      .catch(() => setPlaces([]))
+      .finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     const sigungu = selectedSigungu || '3';
     fetch(`/api/weather?sigungu=${sigungu}`)
